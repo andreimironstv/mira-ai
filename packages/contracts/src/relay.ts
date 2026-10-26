@@ -1345,6 +1345,11 @@ const RelayBillingGroup = HttpApiGroup.make("billing")
   )
   .annotate(OpenApi.Description, "Stripe webhooks and the page Checkout returns to.");
 
+// The page signs in with Clerk in the browser; its API calls carry their own bearer tokens.
+const RelayAdminPanelGroup = HttpApiGroup.make("adminPanel")
+  .add(HttpApiEndpoint.get("page", "/admin"))
+  .annotate(OpenApi.Description, "The admin web page.");
+
 // Authenticated by the account's model API key, in the OpenAI wire format Pi speaks.
 const RelayLlmGroup = HttpApiGroup.make("llm")
   .add(
@@ -1367,6 +1372,7 @@ export const RelayApi = HttpApi.make("RelayApi")
     RelayAdminGroup,
     RelayLlmGroup,
     RelayBillingGroup,
+    RelayAdminPanelGroup,
   )
   .annotate(OpenApi.Title, "T3 Code Relay API")
   .annotate(OpenApi.Version, "1.0.0")

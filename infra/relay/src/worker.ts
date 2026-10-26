@@ -69,6 +69,7 @@ import * as HookForwarder from "./hooks/HookForwarder.ts";
 import * as HeldHooks from "./hooks/HeldHooks.ts";
 import * as HookInbox from "./hooks/HookInbox.ts";
 import * as HookInboxObject from "./hooks/HookInboxObject.ts";
+import * as AdminPanel from "./saas/adminPanel.ts";
 import * as LlmProxy from "./saas/LlmProxy.ts";
 import * as SaasAccounts from "./saas/SaasAccounts.ts";
 import * as SaasApi from "./saas/SaasApi.ts";
@@ -178,6 +179,9 @@ export const layer = Api.make(
           .filter((email) => email.length > 0),
       ),
       Config.withDefault(SaasApi.DEFAULT_SAAS_ADMIN_EMAILS),
+    );
+    const clerkJwtTemplate = yield* Config.String("CLERK_JWT_TEMPLATE").pipe(
+      Config.withDefault("t3-relay"),
     );
     const stripeSecretKey = yield* Config.option(Config.Redacted("STRIPE_SECRET_KEY"));
     const stripeWebhookSecret = yield* Config.option(Config.Redacted("STRIPE_WEBHOOK_SECRET"));
@@ -390,6 +394,11 @@ export const layer = Api.make(
       SaasApi.layerAdminApi,
       LlmProxy.layerApi,
       StripeBilling.layerApi,
+      AdminPanel.layerApi.pipe(
+        Layer.provide(
+          Layer.succeed(AdminPanel.AdminPanelConfig, { clerkPublishableKey, clerkJwtTemplate }),
+        ),
+      ),
       HookForwarder.layerApi.pipe(
         Layer.provide(HookForwarder.layer),
         Layer.provide(layerHookRateLimiter),
