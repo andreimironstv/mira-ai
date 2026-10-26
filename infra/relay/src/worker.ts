@@ -73,6 +73,7 @@ import * as LlmProxy from "./saas/LlmProxy.ts";
 import * as SaasAccounts from "./saas/SaasAccounts.ts";
 import * as SaasApi from "./saas/SaasApi.ts";
 import * as SaasCrypto from "./saas/SaasCrypto.ts";
+import * as StripeBilling from "./saas/StripeBilling.ts";
 
 const layerWebcrypto = Layer.succeed(
   Crypto.Crypto,
@@ -178,6 +179,18 @@ export const layer = Api.make(
       ),
       Config.withDefault(SaasApi.DEFAULT_SAAS_ADMIN_EMAILS),
     );
+    const stripeSecretKey = yield* Config.option(Config.Redacted("STRIPE_SECRET_KEY"));
+    const stripeWebhookSecret = yield* Config.option(Config.Redacted("STRIPE_WEBHOOK_SECRET"));
+    const stripeSettings =
+      Option.isSome(stripeSecretKey) &&
+      Option.isSome(stripeWebhookSecret) &&
+      Redacted.value(stripeSecretKey.value).trim() !== ""
+        ? {
+            secretKey: stripeSecretKey.value,
+            webhookSecret: stripeWebhookSecret.value,
+            returnOrigin: relayPublicOrigin,
+          }
+        : null;
 
     const cloudMintPrivateKey = yield* cloudMintKeyPair.privateKey;
     const cloudMintPublicKey = yield* cloudMintKeyPair.publicKey;
@@ -264,11 +277,12 @@ export const layer = Api.make(
       Layer.provideMerge(
         Layer.merge(
           MobileRegistrations.layer,
-          LlmProxy.layer.pipe(
+          Layer.merge(LlmProxy.layer, StripeBilling.layer).pipe(
             Layer.provideMerge(
               Layer.mergeAll(
                 SaasApi.layerClerkUsers,
                 Layer.succeed(SaasApi.SaasAdmins, saasAdminEmails),
+                Layer.succeed(StripeBilling.StripeConfig, stripeSettings),
                 SaasAccounts.layer.pipe(
                   Layer.provide(
                     Layer.effect(
@@ -375,6 +389,7 @@ export const layer = Api.make(
       SaasApi.layerAccountApi,
       SaasApi.layerAdminApi,
       LlmProxy.layerApi,
+      StripeBilling.layerApi,
       HookForwarder.layerApi.pipe(
         Layer.provide(HookForwarder.layer),
         Layer.provide(layerHookRateLimiter),

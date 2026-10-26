@@ -15,6 +15,7 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 
 import * as RelayConfiguration from "../Config.ts";
 import * as SaasAccounts from "./SaasAccounts.ts";
+import * as StripeBilling from "./StripeBilling.ts";
 
 export const DEFAULT_SAAS_ADMIN_EMAILS = ["contact@andreimiron.ro"];
 
@@ -90,6 +91,7 @@ export const layerAccountApi = HttpApiBuilder.group(
     const clerkUsers = yield* ClerkUsers;
     const admins = yield* SaasAdmins;
     const config = yield* RelayConfiguration.RelayConfiguration;
+    const billing = yield* StripeBilling.StripeBilling;
     return handlers
       .handle(
         "getAccount",
@@ -111,6 +113,22 @@ export const layerAccountApi = HttpApiBuilder.group(
             baseUrl: `${config.relayIssuer.replace(/\/+$/, "")}/v1/llm`,
             model: SAAS_LLM_MODEL_ID,
           };
+        }, mapPersistence),
+      )
+      .handle(
+        "createCheckout",
+        Effect.fn("relay.api.account.create_checkout")(function* ({ payload }) {
+          const { userId } = yield* RelayClientPrincipal;
+          const email = yield* clerkUsers.primaryEmail(userId);
+          yield* accounts.getAccount({ userId, email });
+          return { url: yield* billing.createCheckout({ userId, email, planId: payload.planId }) };
+        }, mapPersistence),
+      )
+      .handle(
+        "createBillingPortal",
+        Effect.fn("relay.api.account.create_billing_portal")(function* () {
+          const { userId } = yield* RelayClientPrincipal;
+          return { url: yield* billing.createPortal(userId) };
         }, mapPersistence),
       );
   }),

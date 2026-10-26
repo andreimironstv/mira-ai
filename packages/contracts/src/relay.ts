@@ -22,12 +22,15 @@ import {
   SaasAdminSettingsResponse,
   SaasAdminUserPlanRequest,
   SaasAdminUsersResponse,
+  SaasBillingUnavailableError,
+  SaasCheckoutRequest,
   SaasForbiddenError,
   SaasInvalidRequestError,
   SaasLlmKeyResponse,
   SaasNotFoundError,
   SaasPlan,
   SaasPlanId,
+  SaasRedirectResponse,
 } from "./saas.ts";
 
 export const RelayAgentAwarenessPlatform = Schema.Literals(["ios", "android"]);
@@ -1276,6 +1279,17 @@ const RelayAccountGroup = HttpApiGroup.make("account")
       success: SaasLlmKeyResponse,
       error: RelayAuthAndInternalErrors,
     }).annotate(OpenApi.Summary, "Issue a new model API key, revoking earlier ones"),
+    HttpApiEndpoint.post("createCheckout", "/v1/account/checkout", {
+      headers: RelayBearerRequestHeaders,
+      payload: SaasCheckoutRequest,
+      success: SaasRedirectResponse,
+      error: [...RelayAuthAndInternalErrors, SaasBillingUnavailableError, SaasNotFoundError],
+    }).annotate(OpenApi.Summary, "Start a Stripe Checkout for a paid plan"),
+    HttpApiEndpoint.post("createBillingPortal", "/v1/account/billing-portal", {
+      headers: RelayBearerRequestHeaders,
+      success: SaasRedirectResponse,
+      error: [...RelayAuthAndInternalErrors, SaasBillingUnavailableError],
+    }).annotate(OpenApi.Summary, "Open the Stripe billing portal"),
   )
   .annotate(OpenApi.Description, "The signed-in user's subscription account.")
   .middleware(RelayClientAuth);
@@ -1323,6 +1337,14 @@ const RelayAdminGroup = HttpApiGroup.make("admin")
   .annotate(OpenApi.Description, "Administration of accounts, plans, and the model key.")
   .middleware(RelayClientAuth);
 
+// Stripe signs the raw body, so the handler reads it before any decoding.
+const RelayBillingGroup = HttpApiGroup.make("billing")
+  .add(
+    HttpApiEndpoint.post("stripeWebhook", "/v1/billing/stripe-webhook"),
+    HttpApiEndpoint.get("checkoutDone", "/billing/done"),
+  )
+  .annotate(OpenApi.Description, "Stripe webhooks and the page Checkout returns to.");
+
 // Authenticated by the account's model API key, in the OpenAI wire format Pi speaks.
 const RelayLlmGroup = HttpApiGroup.make("llm")
   .add(
@@ -1344,6 +1366,7 @@ export const RelayApi = HttpApi.make("RelayApi")
     RelayAccountGroup,
     RelayAdminGroup,
     RelayLlmGroup,
+    RelayBillingGroup,
   )
   .annotate(OpenApi.Title, "T3 Code Relay API")
   .annotate(OpenApi.Version, "1.0.0")

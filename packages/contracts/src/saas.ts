@@ -110,3 +110,40 @@ export class SaasInvalidRequestError extends Schema.TaggedError<SaasInvalidReque
   { code: Schema.Literal("invalid_request"), message: Schema.String },
   { httpApiStatus: 400 },
 ) {}
+
+export const SaasCheckoutRequest = Schema.Struct({
+  planId: SaasPlanId,
+});
+export type SaasCheckoutRequest = typeof SaasCheckoutRequest.Type;
+
+export const SaasRedirectResponse = Schema.Struct({
+  url: TrimmedNonEmptyString,
+});
+export type SaasRedirectResponse = typeof SaasRedirectResponse.Type;
+
+export class SaasBillingUnavailableError extends Schema.TaggedError<SaasBillingUnavailableError>()(
+  "SaasBillingUnavailableError",
+  {
+    code: Schema.Literal("billing_unavailable"),
+    reason: Schema.Literals([
+      "not_configured",
+      "plan_not_purchasable",
+      "no_subscription",
+      "stripe",
+    ]),
+  },
+  { httpApiStatus: 503 },
+) {
+  override get message(): string {
+    switch (this.reason) {
+      case "not_configured":
+        return "Payments are not set up yet.";
+      case "plan_not_purchasable":
+        return "This plan cannot be bought online.";
+      case "no_subscription":
+        return "This account has no paid subscription to manage.";
+      case "stripe":
+        return "Stripe could not start the payment. Try again.";
+    }
+  }
+}

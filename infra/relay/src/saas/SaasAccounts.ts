@@ -64,6 +64,10 @@ export const usedTokens = (usage: SaasUsage) => usage.inputTokens + usage.output
 export const hasQuotaLeft = (plan: SaasPlan, usage: SaasUsage) =>
   usedTokens(usage) < plan.monthlyTokenLimit;
 
+/** Stripe keeps `past_due` subscriptions billable while it retries the card. */
+export const isLiveSubscriptionStatus = (status: string) =>
+  status === "active" || status === "trialing" || status === "past_due";
+
 export interface SaasAccountView {
   readonly userId: string;
   readonly email: string | null;
@@ -100,6 +104,24 @@ export class SaasAccounts extends Context.Service<
     readonly saveSettings: (
       input: SaasAdminSettingsRequest,
     ) => Effect.Effect<SaasAdminSettingsResponse, SaasPersistenceError>;
+    readonly getStripeCustomerId: (
+      userId: string,
+    ) => Effect.Effect<string | null, SaasPersistenceError>;
+    readonly setStripeCustomerId: (input: {
+      readonly userId: string;
+      readonly customerId: string;
+    }) => Effect.Effect<void, SaasPersistenceError>;
+    /**
+     * Applies a Stripe subscription state to the account that owns the customer. A live
+     * subscription moves the account to the plan with the price; anything else returns it
+     * to the default plan.
+     */
+    readonly applySubscription: (input: {
+      readonly customerId: string;
+      readonly subscriptionId: string;
+      readonly status: string;
+      readonly priceId: string | null;
+    }) => Effect.Effect<void, SaasPersistenceError>;
     readonly getModelAccess: Effect.Effect<
       { readonly apiKey: Redacted.Redacted<string> | null; readonly model: string },
       SaasPersistenceError
@@ -415,7 +437,59 @@ export const make = Effect.gen(function* () {
     };
   });
 
+  const getStripeCustomerId: SaasAccounts["Service"]["getStripeCustomerId"] = Effect.fn(
+    "relay.saas.get_stripe_customer_id",
+  )(function* (userId) {
+    const rows = yield* db
+      .select({ customerId: saasAccounts.stripeCustomerId })
+      .from(saasAccounts)
+      .where(eq(saasAccounts.userId, userId))
+      .limit(1)
+      .pipe(persist("load-stripe-customer"));
+    return rows[0]?.customerId ?? null;
+  });
+
+  const setStripeCustomerId: SaasAccounts["Service"]["setStripeCustomerId"] = Effect.fn(
+    "relay.saas.set_stripe_customer_id",
+  )(function* (input) {
+    yield* db
+      .update(saasAccounts)
+      .set({
+        stripeCustomerId: input.customerId,
+        updatedAt: DateTime.formatIso(yield* DateTime.now),
+      })
+      .where(eq(saasAccounts.userId, input.userId))
+      .pipe(persist("save-stripe-customer"));
+  });
+
+  const applySubscription: SaasAccounts["Service"]["applySubscription"] = Effect.fn(
+    "relay.saas.apply_subscription",
+  )(function* (input) {
+    const plans = yield* loadPlans;
+    const paidPlan =
+      input.priceId === null
+        ? undefined
+        : plans.find((plan) => plan.stripePriceId === input.priceId);
+    const planId =
+      isLiveSubscriptionStatus(input.status) && paidPlan !== undefined
+        ? paidPlan.id
+        : (yield* defaultPlan()).id;
+    yield* db
+      .update(saasAccounts)
+      .set({
+        planId,
+        stripeSubscriptionId: input.subscriptionId,
+        subscriptionStatus: input.status,
+        updatedAt: DateTime.formatIso(yield* DateTime.now),
+      })
+      .where(eq(saasAccounts.stripeCustomerId, input.customerId))
+      .pipe(persist("apply-subscription"));
+  });
+
   return SaasAccounts.of({
+    getStripeCustomerId,
+    setStripeCustomerId,
+    applySubscription,
     getAccount,
     createLlmKey,
     resolveLlmKey,
