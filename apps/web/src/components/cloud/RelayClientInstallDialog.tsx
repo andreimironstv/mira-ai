@@ -69,8 +69,8 @@ export function RelayClientInstallDialog() {
           </DialogTitle>
           <DialogDescription>
             {isInstalling
-              ? "Mira is preparing this environment for secure access through T3 Connect."
-              : "Mira needs the relay client to make this environment available through T3 Connect."}
+              ? "Mira is preparing this environment for secure access through Mira Connect."
+              : "Mira needs the relay client to make this environment available through Mira Connect."}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel scrollFade={false}>
