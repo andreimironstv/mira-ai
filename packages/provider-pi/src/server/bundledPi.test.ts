@@ -34,6 +34,18 @@ it("registers the Mira provider for sessions once an account is connected", () =
   expect(resolvePiCommand("/opt/pi", ["--mode", "rpc"], {}).args).toEqual(["--mode", "rpc"]);
 });
 
+it("starts an RPC session when the command is resolved twice with a Mira account", () => {
+  const first = resolvePiCommand(undefined, ["--mode", "rpc"], miraEnv);
+  const command = resolvePiCommand(first.command, first.args, first.env);
+  expect(command.args).toEqual(first.args);
+  const result = NodeChildProcess.spawnSync(command.command, [...command.args], {
+    env: { ...process.env, ...command.env },
+    input: "",
+    encoding: "utf8",
+  });
+  expect(result.status).not.toBe(9);
+});
+
 it("keeps a configured binary path", () => {
   expect(resolvePiCommand("/opt/pi", ["--mode", "rpc"], {})).toEqual({
     command: "/opt/pi",
