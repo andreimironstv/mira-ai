@@ -119,6 +119,8 @@ function withMiraProvider(
 ): ReadonlyArray<string> {
   if (!env[MIRA_BASE_URL_ENV]?.trim() || !env[MIRA_API_KEY_ENV]?.trim()) return args;
   if (!args.includes("--mode")) return args;
+  // Callers may resolve twice; a second prefix would land before the CLI script as Node options.
+  if (miraExtensionPath !== undefined && args.includes(miraExtensionPath)) return args;
   return [
     "--extension",
     writeMiraExtension(),
