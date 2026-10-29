@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { MiraAccountSync } from "../../cloud/MiraAccountSync";
 import { ManagedRelayAuthProvider } from "../../cloud/managedAuth";
+import { AppAtomRegistryProvider } from "../../rpc/atomRegistry";
 import { clerkAppearance } from "./clerkAppearance";
 
 /** Load only lazily inside desktop; clerk-js is statically bundled and would otherwise enter every
@@ -18,7 +19,10 @@ export default function ElectronManagedAuthShell({
   return (
     <ClerkProvider appearance={clerkAppearance} publishableKey={publishableKey} passkeys={passkeys}>
       <ManagedRelayAuthProvider>
-        <MiraAccountSync />
+        {/* Rendered above AppRoot, so it needs the app registry to see the relay session. */}
+        <AppAtomRegistryProvider>
+          <MiraAccountSync />
+        </AppAtomRegistryProvider>
         {children}
       </ManagedRelayAuthProvider>
     </ClerkProvider>
