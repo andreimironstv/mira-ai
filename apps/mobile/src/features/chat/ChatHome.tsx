@@ -22,6 +22,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { RowPressable } from "../../components/ui/RowPressable";
 import { SearchField } from "../../components/ui/SearchField";
 import { NativeStackScreenOptions } from "../../native/StackHeader";
+import { useHardwareKeyboardCommand } from "../keyboard/hardwareKeyboardCommands";
 import { ThreadSwipeable } from "../home/thread-swipe-actions";
 import { useWorkspaceTabs } from "../workspace/WorkspaceTabsContext";
 import { ChatRoundButton } from "./ChatRoundButton";
@@ -143,6 +144,13 @@ export function ChatHome() {
   const { query, setQuery } = useChatSearch();
   const [androidSearching, setAndroidSearching] = useState(false);
   const searchInput = useRef<TextInputInstance>(null);
+  // The search circle beside Android's floating tabs sends this to the tab on screen.
+  useHardwareKeyboardCommand("focusSearch", () => {
+    if (Platform.OS !== "android") return false;
+    setAndroidSearching(true);
+    searchInput.current?.focus();
+    return true;
+  });
   const newChat = () => navigation.navigate("Chat", {});
   // Read per render; the list re-renders whenever a chat changes, which keeps time labels current.
   const now = new Date();
@@ -154,14 +162,16 @@ export function ChatHome() {
         <View style={{ paddingTop: insets.top }}>
           <NativeStackScreenOptions options={{ headerShown: false }} />
           <View className="h-[52px] flex-row items-center justify-end gap-2.5 px-4">
-            <ChatRoundButton
-              accessibilityLabel={androidSearching ? "Închide căutarea" : "Caută în chat-uri"}
-              icon={androidSearching ? "xmark" : "magnifyingglass"}
-              onPress={() => {
-                if (androidSearching) setQuery("");
-                setAndroidSearching(!androidSearching);
-              }}
-            />
+            {androidSearching ? (
+              <ChatRoundButton
+                accessibilityLabel="Închide căutarea"
+                icon="xmark"
+                onPress={() => {
+                  setQuery("");
+                  setAndroidSearching(false);
+                }}
+              />
+            ) : null}
             <ChatRoundButton
               accessibilityLabel="Chat nou"
               icon="square.and.pencil"

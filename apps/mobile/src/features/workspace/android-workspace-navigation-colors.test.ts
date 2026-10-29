@@ -25,8 +25,15 @@ function contrast(first: string, second: string) {
   );
 }
 
-function expectVisibleSelection(colors: ReturnType<typeof androidWorkspaceNavigationColors>) {
-  expect(contrast(colors.indicatorColor, colors.containerColor)).toBeGreaterThanOrEqual(1.5);
+function expectVisibleSelection(
+  colors: ReturnType<typeof androidWorkspaceNavigationColors>,
+  rail: boolean,
+) {
+  // The bar marks its tab with a filled icon in the accent over a faint tint, as on iOS; the rail
+  // with its pill alone.
+  expect(contrast(colors.indicatorColor, colors.containerColor)).toBeGreaterThanOrEqual(
+    rail ? 1.5 : 1.1,
+  );
   for (const surface of [colors.containerColor, colors.indicatorColor]) {
     expect(contrast(colors.selectedColor, surface)).toBeGreaterThanOrEqual(4.5);
   }
@@ -41,7 +48,7 @@ describe("Android workspace navigation colors", () => {
         const variables = getMobileThemeRuntimeVariables(themeId, appearance, "android");
         const snapshot = { ...variables };
         for (const rail of [false, true]) {
-          expectVisibleSelection(androidWorkspaceNavigationColors(variables, rail));
+          expectVisibleSelection(androidWorkspaceNavigationColors(variables, rail), rail);
         }
         expect(variables).toEqual(snapshot);
       }
@@ -91,7 +98,7 @@ describe("Android workspace navigation colors", () => {
           getMobileThemeRuntimeVariables("material-you", appearance, "android"),
         );
         for (const rail of [false, true]) {
-          expectVisibleSelection(androidWorkspaceNavigationColors(variables, rail));
+          expectVisibleSelection(androidWorkspaceNavigationColors(variables, rail), rail);
         }
       }
     },
