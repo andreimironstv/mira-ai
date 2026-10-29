@@ -40,6 +40,27 @@ export const SHOW_VISUAL_TOOL = {
   },
 } as const;
 
+export const SUGGEST_REPLIES_TOOL = {
+  type: "function",
+  function: {
+    name: "suggest_replies",
+    description:
+      "Offer the user up to three short replies they could tap to continue, after you finish writing your answer. Write them as the user would, in the user's language, at most six words each.",
+    parameters: {
+      type: "object",
+      properties: {
+        replies: { type: "array", items: { type: "string" }, description: "The replies." },
+      },
+      required: ["replies"],
+    },
+  },
+} as const;
+
+/** What the model hears back from suggest_replies, when other calls keep the reply going. */
+export const SUGGESTIONS_SHOWN_RESULT = "Shown to the user.";
+const MAX_SUGGESTIONS = 3;
+const MAX_SUGGESTION_LENGTH = 60;
+
 // Longer than any fence the page itself is likely to contain, so its HTML cannot close the block.
 const VISUAL_FENCE = "````";
 /** What the model hears back from show_visual. */
@@ -59,6 +80,12 @@ export const contentEvent = (content: string) =>
 export const searchingEvent = () =>
   encoder.encode(`data: ${toJson({ mira: { status: "searching" } })}\n\n`);
 export const doneEvent = () => encoder.encode("data: [DONE]\n\n");
+/** Replies the user can tap to continue, sent once the answer is written. */
+export const suggestionsEvent = (suggestions: ReadonlyArray<string>) =>
+  encoder.encode(`data: ${toJson({ mira: { suggestions } })}\n\n`);
+/** Free messages a device without an account has left today, counting this one. */
+export const remainingEvent = (remaining: number) =>
+  encoder.encode(`data: ${toJson({ mira: { remaining } })}\n\n`);
 
 export interface ToolCall {
   readonly id: string;
@@ -181,6 +208,16 @@ export const visualHtml = (call: ToolCall): string | undefined => {
   // Models sometimes wrap the page in a markdown fence, which would show as text.
   const page = /^```[\w-]*\n([\s\S]*?)\n?```$/.exec(html)?.[1]?.trim() ?? html;
   return page === "" ? undefined : page;
+};
+
+/** The usable replies a suggest_replies call offers; empty when its arguments are not valid. */
+export const suggestedReplies = (call: ToolCall): ReadonlyArray<string> => {
+  const args = record(Option.getOrUndefined(parseJson(call.arguments)));
+  const replies = Array.isArray(args?.replies) ? args.replies : [];
+  return replies
+    .flatMap((reply) => (typeof reply === "string" ? [reply.trim()] : []))
+    .filter((reply) => reply !== "" && reply.length <= MAX_SUGGESTION_LENGTH)
+    .slice(0, MAX_SUGGESTIONS);
 };
 
 export const searchRequestBody = (query: string) => ({ query, count: SEARCH_RESULT_COUNT });

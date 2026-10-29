@@ -16,7 +16,7 @@ export type WorkspaceTab = NavigationTab;
 export type WorkspaceSearchTab = WorkspaceTab | "settings";
 export type WorkspaceSearchMode = "resting" | "active" | "expanded";
 
-/** Settings, Chats and pull requests pair a list with a detail column; Usage is one page. */
+/** Settings, Agent and pull requests pair a list with a detail column; Chat is one page. */
 export function workspaceUsesColumns(tab: WorkspaceTab, settingsOpen = false) {
   return settingsOpen || tab === "threads" || tab === "pullRequests";
 }
@@ -46,7 +46,6 @@ export function initialWorkspaceTabsState(): WorkspaceTabsState {
       chats: emptyTab(),
       threads: emptyTab(),
       pullRequests: emptyTab(),
-      usage: emptyTab(),
       settings: emptyTab(),
     },
   };
@@ -73,7 +72,9 @@ export function workspaceTabsReducer(
           selectionRevision: state.selectionRevision + 1,
         };
   const tab = action.tab ?? state.selectedTab;
-  if (tab !== "threads" && tab !== "pullRequests" && tab !== "settings") return state;
+  if (tab !== "chats" && tab !== "threads" && tab !== "pullRequests" && tab !== "settings") {
+    return state;
+  }
   const current = state.tabs[tab];
   let next: WorkspaceTabState;
   switch (action.type) {

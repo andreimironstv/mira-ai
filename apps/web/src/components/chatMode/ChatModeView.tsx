@@ -2,6 +2,7 @@ import type { LegendListRef } from "@legendapp/list/react";
 import {
   chatAttachmentProblem,
   chatAttachmentUrl,
+  freeMessagesLabel,
   isRetryable,
   type ChatReplyError,
 } from "@t3tools/client-runtime/chat";
@@ -14,11 +15,28 @@ import { EnvironmentId, MessageId } from "@t3tools/contracts";
 import { withoutOpenVisual } from "@t3tools/shared/htmlRender";
 import type { SaasChatConversation } from "@t3tools/contracts/saas";
 import { useNavigate } from "@tanstack/react-router";
-import { FileTextIcon, ImageIcon, PlusIcon, SquareIcon, XIcon } from "lucide-react";
-import { createRef, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  CameraIcon,
+  FileTextIcon,
+  GlobeIcon,
+  ImageIcon,
+  MailIcon,
+  PlusIcon,
+  SquareIcon,
+  XIcon,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  createRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type Ref,
+} from "react";
 
 import {
-  hasAgenticAccess,
   miraChatHistory,
   uploadMiraAttachment,
   useMiraAccess,
@@ -42,7 +60,6 @@ import { SidebarInset } from "../ui/sidebar";
 import { Spinner } from "../ui/spinner";
 import { WorkspacePageHeader } from "../WorkspacePageHeader";
 import { AgenticUpgradeDialog } from "./AgenticUpgradeDialog";
-import { ChatModeSwitch } from "./ChatModeSwitch";
 
 // The timeline keys rows by environment; nothing behind this id loads, as on the guest page.
 const CHAT_ENVIRONMENT_ID = EnvironmentId.make("mira-chat");
@@ -50,6 +67,44 @@ const NO_COMPOSER = createRef<ChatComposerHandle>();
 const NO_TURN_DIFFS: ReadonlyArray<never> = [];
 const NO_TURN_ITEMS: ReadonlyArray<never> = [];
 const ignore = () => {};
+
+/** Ways into a first message for someone who does not know what to ask. */
+const STARTERS: ReadonlyArray<{
+  readonly icon: LucideIcon;
+  readonly title: string;
+  readonly detail: string;
+  readonly text: string;
+  readonly attach: boolean;
+}> = [
+  {
+    icon: CameraIcon,
+    title: "Explică-mi o factură",
+    detail: "Adaugă o poză și întreabă",
+    text: "Explică-mi factura din poză.",
+    attach: true,
+  },
+  {
+    icon: MailIcon,
+    title: "Scrie un e-mail",
+    detail: "Politicos, scurt, clar",
+    text: "Scrie-mi un e-mail politicos și scurt despre ",
+    attach: false,
+  },
+  {
+    icon: GlobeIcon,
+    title: "Plan de weekend",
+    detail: "Trasee, program, buget",
+    text: "Fă-mi un plan de weekend în ",
+    attach: false,
+  },
+  {
+    icon: FileTextIcon,
+    title: "Rezumă un document",
+    detail: "PDF, Word sau poză",
+    text: "Rezumă pe scurt documentul atașat.",
+    attach: true,
+  },
+];
 
 const markdownLabel = (name: string) => name.replace(/[[\]\\]/g, "\\$&");
 
@@ -110,12 +165,19 @@ export function ChatModeView({ chatId }: { readonly chatId: string | null }) {
   const history = useMiraChatHistory();
   const access = useMiraAccess();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const composer = useRef<ChatModeComposerHandle>(null);
   const chat = chatId === null ? undefined : history.chats.find((item) => item.id === chatId);
   const missing = chatId !== null && history.loaded && chat === undefined;
+  const updatedAt = chat?.updatedAt;
 
   useEffect(() => {
     if (missing) void navigate({ to: "/ask", replace: true });
   }, [missing, navigate]);
+
+  // A reply that lands while the chat is on screen is read.
+  useEffect(() => {
+    if (chatId !== null && updatedAt !== undefined) miraChatHistory.markSeen(chatId);
+  }, [chatId, updatedAt]);
 
   const send = async (text: string, attachments: ReadonlyArray<SaasChatAttachment>) => {
     await miraChatHistory.send(chat?.id ?? null, text, {
@@ -134,24 +196,45 @@ export function ChatModeView({ chatId }: { readonly chatId: string | null }) {
   const busy = history.streaming !== null;
   const searching = history.streaming?.searching === true && history.streaming.chatId === chat?.id;
   const error = history.error !== null && history.error.chatId === chat?.id ? history.error : null;
+  const lastMessage = chat?.messages.at(-1);
+  const suggestions =
+    !busy && lastMessage?.role === "assistant" ? (lastMessage.suggestions ?? []) : [];
+  const freeMessagesLeft = access.signedIn ? null : history.freeMessagesLeft;
   return (
     <SidebarInset className="h-dvh min-h-0 overflow-hidden overscroll-y-none">
       <WorkspacePageHeader electron={isElectron}>
-        <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{chat?.title ?? "Chat nou"}</h1>
-        <ChatModeSwitch
-          mode="chat"
-          onAgentic={() => {
-            if (hasAgenticAccess(access)) void navigate({ to: "/" });
-            else setUpgradeOpen(true);
-          }}
-        />
+        <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">
+          {chat?.title ?? "Chat nou"}
+        </h1>
       </WorkspacePageHeader>
       {chat === undefined ? (
-        <div className="m-auto flex max-w-md flex-col items-center gap-2 px-6 text-center">
-          <p className="text-2xl font-medium">What can I help with?</p>
-          <p className="text-sm text-muted-foreground">
-            Întreabă orice. Chat-ul merge și fără un calculator conectat.
+        <div className="m-auto flex w-full max-w-(--chat-content-max-width) flex-col items-center px-6">
+          <span
+            aria-hidden
+            className="mb-6 size-16 rounded-full opacity-85"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 35% 30%, #f3e8ff, #c7d2fe 45%, #a5f3fc 100%)",
+            }}
+          />
+          <p className="text-center text-3xl font-semibold tracking-tight">Cu ce te pot ajuta?</p>
+          <p className="mt-2 text-center text-base text-muted-foreground">
+            Scrie o întrebare sau adaugă o poză ori un document.
           </p>
+          <div className="mt-10 grid w-full grid-cols-2 gap-2.5">
+            {STARTERS.map((starter) => (
+              <button
+                key={starter.title}
+                type="button"
+                className="flex cursor-pointer flex-col items-start gap-0.5 rounded-2xl bg-muted/60 px-4 py-3.5 text-left hover:bg-muted"
+                onClick={() => composer.current?.start(starter.text, starter.attach)}
+              >
+                <starter.icon aria-hidden className="mb-2 size-5 text-primary" />
+                <span className="text-sm font-semibold">{starter.title}</span>
+                <span className="text-xs text-muted-foreground">{starter.detail}</span>
+              </button>
+            ))}
+          </div>
         </div>
       ) : (
         <ChatTimeline chat={chat} streaming={history.streaming} />
@@ -168,13 +251,43 @@ export function ChatModeView({ chatId }: { readonly chatId: string | null }) {
           <p className="mx-auto mb-2 w-full max-w-(--chat-content-max-width) px-1 text-muted-foreground text-xs">
             Caut pe internet…
           </p>
+        ) : suggestions.length > 0 ? (
+          <div className="mx-auto mb-2.5 flex w-full max-w-(--chat-content-max-width) flex-wrap gap-2">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                className="h-8 cursor-pointer rounded-full bg-primary/10 px-3.5 text-sm font-medium text-primary hover:bg-primary/15"
+                onClick={() => void send(suggestion, [])}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
         ) : null}
         <ChatModeComposer
+          ref={composer}
           busy={busy}
           replying={chat !== undefined && history.streaming?.chatId === chat.id}
           onSend={send}
           onStop={() => miraChatHistory.stop()}
         />
+        <p className="mx-auto mt-2 w-full max-w-(--chat-content-max-width) text-center text-xs text-muted-foreground/80">
+          {freeMessagesLeft !== null && access.openSignIn !== null ? (
+            <>
+              {`${freeMessagesLabel(freeMessagesLeft)} · `}
+              <button
+                type="button"
+                className="cursor-pointer font-semibold text-primary hover:underline"
+                onClick={access.openSignIn}
+              >
+                Creează cont
+              </button>
+            </>
+          ) : (
+            "Mira poate greși. Verifică informațiile importante."
+          )}
+        </p>
       </div>
       <AgenticUpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
     </SidebarInset>
@@ -322,13 +435,20 @@ const ACCEPTED_FILES = [
   ...SAAS_CHAT_DOCUMENT_EXTENSIONS.map((extension) => `.${extension}`),
 ].join(",");
 
+interface ChatModeComposerHandle {
+  /** Fills in a starter prompt, then opens the file picker or puts the cursor after it. */
+  readonly start: (text: string, attach: boolean) => void;
+}
+
 // The thread composer's surface, attach and send buttons, without model controls.
 function ChatModeComposer({
+  ref,
   busy,
   replying,
   onSend,
   onStop,
 }: {
+  readonly ref?: Ref<ChatModeComposerHandle>;
   readonly busy: boolean;
   /** Mira is answering this chat, so the send button stops her instead. */
   readonly replying: boolean;
@@ -338,6 +458,19 @@ function ChatModeComposer({
   const [text, setText] = useState("");
   const [files, setFiles] = useState<ReadonlyArray<PendingFile>>([]);
   const fileInput = useRef<HTMLInputElement>(null);
+  const textArea = useRef<HTMLTextAreaElement>(null);
+  useImperativeHandle(ref, () => ({
+    start: (starter, attach) => {
+      setText(starter);
+      if (attach) {
+        fileInput.current?.click();
+        return;
+      }
+      const field = textArea.current;
+      field?.focus();
+      field?.setSelectionRange(starter.length, starter.length);
+    },
+  }));
   const uploading = files.some((file) => file.attachment === null);
   const ready = files.flatMap((file) => (file.attachment === null ? [] : [file.attachment]));
   const canSend = !busy && !uploading && (text.trim() !== "" || ready.length > 0);
@@ -427,8 +560,9 @@ function ChatModeComposer({
               ) : null}
               <div className="relative px-3 pt-3.5 pb-2 sm:px-4 sm:pt-4">
                 <textarea
+                  ref={textArea}
                   aria-label="Mesaj"
-                  placeholder="Întreabă orice..."
+                  placeholder="Întreabă orice"
                   autoFocus
                   value={text}
                   onChange={(event) => setText(event.target.value)}
@@ -470,7 +604,8 @@ function ChatModeComposer({
                   >
                     <SquareIcon aria-hidden className="size-3 fill-current" />
                   </button>
-                ) : (
+                ) : !canSend && !busy ? null : (
+                  // Send appears once there is something to send.
                   <button
                     type="submit"
                     aria-label="Trimite mesajul"

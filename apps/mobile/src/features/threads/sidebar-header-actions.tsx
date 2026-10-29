@@ -7,7 +7,7 @@ export interface SidebarHeaderActionsProps {
 
 function FallbackHeaderButton(props: {
   readonly accessibilityLabel: string;
-  readonly icon: "gearshape" | "square.and.pencil";
+  readonly icon: "person.crop.circle" | "square.and.pencil";
   readonly onPress: () => void;
 }) {
   return (
@@ -32,8 +32,8 @@ export function SidebarHeaderActions(props: SidebarHeaderActionsProps) {
   return (
     <View className="flex-row items-center gap-0.5">
       <FallbackHeaderButton
-        accessibilityLabel="Deschide setările"
-        icon="gearshape"
+        accessibilityLabel="Deschide contul"
+        icon="person.crop.circle"
         onPress={props.onOpenSettings}
       />
     </View>

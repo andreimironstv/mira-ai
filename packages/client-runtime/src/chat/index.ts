@@ -1,5 +1,6 @@
 export * from "./chatAttachments.ts";
 export * from "./chatHistory.ts";
+export * from "./chatList.ts";
 export * from "./chatReply.ts";
 export * from "./miraAccess.ts";
 export * from "./relayChatRemote.ts";

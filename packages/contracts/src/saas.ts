@@ -233,6 +233,8 @@ export const SaasChatMessage = Schema.Struct({
   content: Schema.String,
   createdAt: Schema.String,
   attachments: Schema.optionalKey(Schema.Array(SaasChatAttachment)),
+  /** Short replies Mira offers after her answer, for the user to tap. */
+  suggestions: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 export type SaasChatMessage = typeof SaasChatMessage.Type;
 

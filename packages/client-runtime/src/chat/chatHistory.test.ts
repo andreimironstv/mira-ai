@@ -359,6 +359,66 @@ describe("ChatHistory", () => {
     expect(history.getSnapshot().chats.map((chat) => chat.id)).toContain("old");
   });
 
+  it("marks a reply unread until its chat is seen, but never synced history", async () => {
+    const { history } = makeHistory({
+      reply: { ok: true, text: "Hello", suggestions: ["Tell me more", "Thanks"] },
+    });
+    const chatId = await history.send(null, "Hi");
+    expect(history.getSnapshot().unread.has(chatId)).toBe(true);
+    expect(history.getSnapshot().chats[0]?.messages.at(-1)?.suggestions).toEqual([
+      "Tell me more",
+      "Thanks",
+    ]);
+    history.markSeen(chatId);
+    expect(history.getSnapshot().unread.size).toBe(0);
+
+    const answered: SaasChatConversation = {
+      ...remoteChat("elsewhere", "2026-10-25T00:00:00.000Z"),
+      messages: [
+        { id: "q", role: "user", content: "Hi", createdAt: "2026-10-25T00:00:00.000Z" },
+        { id: "a", role: "assistant", content: "Hey", createdAt: "2026-10-25T00:00:01.000Z" },
+      ],
+    };
+    await history.setRemote(memoryRemote("user-1", [answered]).remote);
+    expect(history.getSnapshot().chats.map((chat) => chat.id)).toContain("elsewhere");
+    expect(history.getSnapshot().unread.size).toBe(0);
+  });
+
+  it("counts the free messages the relay reports for today, down to a sign-up refusal", async () => {
+    const replies: Array<ChatReplyResult> = [
+      { ok: true, text: "Hi", remaining: 7 },
+      { ok: false, code: "sign_up_required", message: "Create an account" },
+    ];
+    const history = new ChatHistory({
+      storage: memoryStorage(),
+      now: () => "2026-10-26T10:00:00.000Z",
+      requestReply: async () => replies.shift()!,
+    });
+    await history.load();
+    expect(history.getSnapshot().freeMessagesLeft).toBeNull();
+    await history.send(null, "Hello");
+    expect(history.getSnapshot().freeMessagesLeft).toBe(7);
+    await history.send(null, "Again");
+    expect(history.getSnapshot().freeMessagesLeft).toBe(0);
+  });
+
+  it("forgets yesterday's free message count", async () => {
+    const storage = memoryStorage();
+    const yesterday = new ChatHistory({
+      storage,
+      now: () => "2026-10-25T23:00:00.000Z",
+      requestReply: async () => ({ ok: true, text: "Hi", remaining: 3 }),
+    });
+    await yesterday.send(null, "Hello");
+    const today = new ChatHistory({
+      storage,
+      now: () => "2026-10-26T01:00:00.000Z",
+      requestReply: async () => ({ ok: true, text: "Hi" }),
+    });
+    await today.load();
+    expect(today.getSnapshot().freeMessagesLeft).toBeNull();
+  });
+
   it("titles empty and long first messages", () => {
     expect(chatTitle("   ")).toBe("Chat nou");
     expect(chatTitle("x".repeat(100))).toHaveLength(60);
@@ -373,5 +433,18 @@ describe("ChatSseDecoder", () => {
     decoder.push('lta":{"content":"lo"}}]}\n\ndata: [DONE]\n');
     decoder.finish();
     expect(decoder.text).toBe("Hello");
+  });
+
+  it("reads the relay's suggested replies and free message count", () => {
+    const decoder = new ChatSseDecoder();
+    const event = (data: string) => `data: ${data}${"\n"}${"\n"}`;
+    decoder.push(
+      event('{"mira":{"remaining":4}}') + event('{"choices":[{"delta":{"content":"Ok"}}]}'),
+    );
+    decoder.push(event('{"mira":{"suggestions":["More","Thanks"]}}') + event("[DONE]"));
+    expect(decoder.text).toBe("Ok");
+    expect(decoder.remaining).toBe(4);
+    expect(decoder.suggestions).toEqual(["More", "Thanks"]);
+    expect(decoder.done).toBe(true);
   });
 });

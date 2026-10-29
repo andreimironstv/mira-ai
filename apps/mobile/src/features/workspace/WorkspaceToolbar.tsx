@@ -22,7 +22,8 @@ import { WORKSPACE_TOOLBAR, type WorkspaceTab } from "./workspace-tabs-state";
 import { PullRequestGlyph } from "../pull-requests/pullRequestGlyphs";
 
 const TABS: ReadonlyArray<{ id: WorkspaceTab; label: string; icon: AppSymbolName }> = [
-  { id: "threads", label: "Conversații", icon: "text.bubble" },
+  { id: "chats", label: "Chat", icon: "text.bubble" },
+  { id: "threads", label: "Agent", icon: "bolt.circle" },
   { id: "pullRequests", label: "PRs", icon: PullRequestGlyph.pullRequest },
 ];
 
@@ -50,6 +51,7 @@ function ToolbarButton(props: {
 export function WorkspaceToolbar(props: {
   readonly sidebar?: boolean;
   readonly onNewTask: () => void;
+  readonly onNewChat?: () => void;
 }) {
   const workspace = useWorkspaceTabs();
   const input = useRef<TextInputInstance>(null);
@@ -62,7 +64,7 @@ export function WorkspaceToolbar(props: {
   const focusSearch = useCallback(() => {
     if (!workspace) return false;
     const tab = workspace.state.selectedTab;
-    if (tab !== "threads" && tab !== "pullRequests") return false;
+    if (tab !== "chats" && tab !== "threads" && tab !== "pullRequests") return false;
     workspace.dispatch({ type: "scroll", tab, offset: workspace.getScrollOffset(tab) });
     workspace.dispatch({ type: "search" });
     setFocusRequest((request) => request + 1);
@@ -142,7 +144,13 @@ export function WorkspaceToolbar(props: {
             />
           </View>
         ) : null}
-        {showNavigation ? <WorkspaceDock onNewTask={props.onNewTask} /> : null}
+        {showNavigation ? (
+          <WorkspaceDock
+            onNewTask={
+              state.selectedTab === "chats" && props.onNewChat ? props.onNewChat : props.onNewTask
+            }
+          />
+        ) : null}
       </View>
     </KeyboardStickyView>
   );

@@ -56,15 +56,15 @@ describe("Duo list clearance", () => {
 });
 
 describe("workspace root navigation", () => {
-  it("pairs Settings, chats and pull requests with a detail column, and keeps Usage one page", () => {
-    expect(workspaceUsesColumns("usage")).toBe(false);
-    expect(workspaceUsesColumns("usage", true)).toBe(true);
+  it("pairs Settings, Agent and pull requests with a detail column, and keeps Chat one page", () => {
+    expect(workspaceUsesColumns("chats")).toBe(false);
+    expect(workspaceUsesColumns("chats", true)).toBe(true);
     expect(workspaceUsesColumns("threads")).toBe(true);
     expect(workspaceUsesColumns("pullRequests")).toBe(true);
   });
 
   it("keeps the registered defaults while customization is unavailable", () => {
-    expect(resolveWorkspaceTabOrder(undefined)).toEqual(["chats", "threads", "usage"]);
+    expect(resolveWorkspaceTabOrder(undefined)).toEqual(["chats", "threads"]);
     expect(resolveWorkspaceTabOrder(["home", "usage", "issues", "threads"])).toEqual(
       resolveWorkspaceTabOrder(undefined),
     );
@@ -146,25 +146,23 @@ describe("workspace root navigation", () => {
     expect(state.tabs.pullRequests.searchMode).toBe("resting");
     expect(workspaceTabsReducer(state, { type: "select", tab: "pullRequests" })).toBe(state);
   });
-  it("returns from Usage without losing list state", () => {
+  it("searches chats apart from the agent's list", () => {
     let state = workspaceTabsReducer(threadsTabState(), {
       type: "query",
       query: "retained",
       tab: "threads",
     });
-    for (const tab of ["usage"] as const) {
-      state = workspaceTabsReducer(state, { type: "select", tab });
-      expect(state.selectedTab).toBe(tab);
-      expect(workspaceTabsReducer(state, { type: "search" })).toBe(state);
-    }
+    state = workspaceTabsReducer(state, { type: "select", tab: "chats" });
+    state = workspaceTabsReducer(state, { type: "query", query: "factura" });
+    expect(state.tabs.chats.query).toBe("factura");
     state = workspaceTabsReducer(state, { type: "select", tab: "threads" });
     expect(state.tabs.threads.query).toBe("retained");
   });
   it("opens Settings on native reselection instead of selecting its overflow section", () => {
-    const order = ["threads", "pullRequests", "usage"] as const;
+    const order = ["chats", "threads", "pullRequests"] as const;
     expect(workspaceTabForNativeSlot(order, "settings")).toBe("settings");
-    expect(workspaceTabForNativeSlot(order, "first")).toBe("threads");
-    expect(workspaceTabForNativeSlot(order, "third")).toBe("usage");
+    expect(workspaceTabForNativeSlot(order, "first")).toBe("chats");
+    expect(workspaceTabForNativeSlot(order, "third")).toBe("pullRequests");
     expect(workspaceTabForNativeSlot(order, "removed")).toBeNull();
   });
 });

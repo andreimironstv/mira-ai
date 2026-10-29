@@ -132,18 +132,19 @@ export function WorkspaceNativeTabs(props: {
               // Stable slot controllers keep UIKit's stacks attached when a section moves into Settings.
               key={slot}
               screenKey={slot}
-              title=""
-              tabBarItemAccessibilityLabel={settings ? "Setări" : WORKSPACE_TAB_LABELS[tab]}
+              title={settings ? "Cont" : WORKSPACE_TAB_LABELS[tab]}
+              tabBarItemAccessibilityLabel={settings ? "Cont" : WORKSPACE_TAB_LABELS[tab]}
               ios={{
                 icon: settings
-                  ? { type: "sfSymbol", name: "gearshape" }
+                  ? { type: "sfSymbol", name: "person.crop.circle" }
                   : tab === "pullRequests"
                     ? { type: "templateSource", templateSource: PULL_REQUEST_ICON }
                     : { type: "sfSymbol", name: NAVIGATION_TAB_ICONS[tab] },
-                selectedIcon:
-                  !settings && tab === "threads"
-                    ? { type: "sfSymbol", name: "text.bubble.fill" }
-                    : undefined,
+                selectedIcon: settings
+                  ? { type: "sfSymbol", name: "person.crop.circle.fill" }
+                  : tab === "pullRequests"
+                    ? undefined
+                    : { type: "sfSymbol", name: `${NAVIGATION_TAB_ICONS[tab]}.fill` },
                 overrideScrollViewContentInsetAdjustmentBehavior: false,
               }}
             >

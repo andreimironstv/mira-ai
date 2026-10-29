@@ -1,6 +1,6 @@
 import { WorkspaceNoTabs } from "./WorkspaceNoTabs";
 import { WORKSPACE_TAB_LABELS, useEnabledNavigationTabs } from "./navigation-tabs";
-import { WorkspaceExtraTab } from "./WorkspaceExtraTab";
+import { ChatHome } from "../chat/ChatHome";
 import { SettingsRouteScreen } from "../settings/SettingsRouteScreen";
 import { WorkspaceSectionToolbar } from "./WorkspaceSectionToolbar";
 import { useNavigation } from "@react-navigation/native";
@@ -57,7 +57,7 @@ function WorkspaceRootTitle(props: {
   const { state, settingsOpen } = useWorkspaceTabs()!;
   const enabled = useEnabledNavigationTabs();
   const tabTitle = settingsOpen
-    ? "Setări"
+    ? "Cont"
     : enabled.length
       ? TAB_TITLES[state.selectedTab]
       : "Navigare";
@@ -111,26 +111,24 @@ function WorkspaceRootContent() {
   const settingsOpen = workspace.settingsOpen;
   const tab = state.tabs[settingsOpen ? "settings" : state.selectedTab];
   const bottomClearance =
-    layout.primarySidebarOverlaysContent && state.selectedTab === "usage"
-      ? workspaceDockBottomClearance({ bottomInset: insets.bottom, keyboardHeight })
-      : Platform.OS === "ios" && isDuoDevice(deviceType)
-        ? workspaceSearchBottomClearance({
-            bottomInset: insets.bottom,
-            bottomBarInset,
-            keyboardHeight,
-          })
-        : compactTabs || deviceType === "pad"
-          ? workspaceDockBottomClearance({ bottomInset: insets.bottom, keyboardHeight })
-          : Platform.OS === "ios"
-            ? Math.max(insets.bottom, keyboardHeight) +
-              (systemTabBar || sidebarTabs || tab.searchMode !== "resting"
-                ? sidebarPicker
-                  ? 80
-                  : 16
-                : WORKSPACE_DOCK.height + WORKSPACE_DOCK.bottomGap + 16)
-            : keyboardHeight > 0 && tab.searchMode !== "resting"
-              ? keyboardHeight + 64
-              : Math.max(insets.bottom, 12) + workspaceToolbarHeight(tab.searchMode) + 16;
+    Platform.OS === "ios" && isDuoDevice(deviceType)
+      ? workspaceSearchBottomClearance({
+          bottomInset: insets.bottom,
+          bottomBarInset,
+          keyboardHeight,
+        })
+      : compactTabs || deviceType === "pad"
+        ? workspaceDockBottomClearance({ bottomInset: insets.bottom, keyboardHeight })
+        : Platform.OS === "ios"
+          ? Math.max(insets.bottom, keyboardHeight) +
+            (systemTabBar || sidebarTabs || tab.searchMode !== "resting"
+              ? sidebarPicker
+                ? 80
+                : 16
+              : WORKSPACE_DOCK.height + WORKSPACE_DOCK.bottomGap + 16)
+          : keyboardHeight > 0 && tab.searchMode !== "resting"
+            ? keyboardHeight + 64
+            : Math.max(insets.bottom, 12) + workspaceToolbarHeight(tab.searchMode) + 16;
   const context = useMemo(() => ({ ...workspace, bottomClearance }), [workspace, bottomClearance]);
 
   return (
@@ -151,7 +149,7 @@ function WorkspaceRootContent() {
             ]}
             options={{
               title: settingsOpen
-                ? "Setări"
+                ? "Cont"
                 : enabled.length
                   ? TAB_TITLES[state.selectedTab]
                   : "Navigare",
@@ -167,10 +165,7 @@ function WorkspaceRootContent() {
               unstable_headerLeftItems: () => [],
               // Beside a detail column the tab bar names the tab and the detail header the page,
               // so the sidebar keeps the brand.
-              headerTitle:
-                sidebarNavigation || (!settingsOpen && state.selectedTab !== "usage")
-                  ? renderHeaderTitle
-                  : undefined,
+              headerTitle: sidebarNavigation || !settingsOpen ? renderHeaderTitle : undefined,
             }}
           />
         ) : (
@@ -193,8 +188,8 @@ function WorkspaceRootContent() {
                   ]
                 : []),
               {
-                accessibilityLabel: "Setări",
-                icon: "gearshape",
+                accessibilityLabel: "Cont",
+                icon: "person.crop.circle",
                 onPress: () => selectTab("settings"),
               },
             ]}
@@ -214,19 +209,19 @@ function WorkspaceRootContent() {
           ) : state.selectedTab === "pullRequests" ? (
             <PullRequestsScreen />
           ) : (
-            <WorkspaceExtraTab tab={state.selectedTab} />
+            <ChatHome />
           )}
         </SafeAreaInsetsContext>
         {deviceType !== "pad" && deviceType !== "phone" && sidebarPicker ? (
           <WorkspaceSidebarTabs />
         ) : null}
         {/* Android's Settings list carries its own search in its app bar. */}
-        {enabled.length === 0 && !settingsOpen ? null : (
-            settingsOpen
-              ? Platform.OS === "ios"
-              : state.selectedTab === "threads" || state.selectedTab === "pullRequests"
-          ) ? (
-          <WorkspaceToolbar sidebar={sidebarNavigation} onNewTask={startNewTask} />
+        {enabled.length === 0 && !settingsOpen ? null : !settingsOpen || Platform.OS === "ios" ? (
+          <WorkspaceToolbar
+            sidebar={sidebarNavigation}
+            onNewTask={startNewTask}
+            onNewChat={() => navigation.navigate("Chat", {})}
+          />
         ) : (
           <WorkspaceSectionToolbar onNewTask={startNewTask} showCompose={false} />
         )}
