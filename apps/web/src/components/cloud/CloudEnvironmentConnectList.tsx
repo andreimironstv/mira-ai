@@ -1,4 +1,5 @@
 import { findErrorTraceId } from "@t3tools/client-runtime/errors";
+import { setComputerDismissed } from "../../cloud/miraSharing";
 import {
   type EnvironmentConnectionPresentation,
   RelayConnectionRegistration,
@@ -100,8 +101,9 @@ export function CloudEnvironmentConnectRows({
     if (environmentsState.refreshing || environmentsState.offline) return;
     await refreshRelayEnvironments();
   });
-  const connectRelayEnvironment = (environment: RelayClientEnvironmentRecord) =>
-    registerEnvironment(
+  const connectRelayEnvironment = (environment: RelayClientEnvironmentRecord) => {
+    setComputerDismissed(environment.environmentId, false);
+    return registerEnvironment(
       new RelayConnectionRegistration({
         target: new RelayConnectionTarget({
           environmentId: environment.environmentId,
@@ -109,6 +111,7 @@ export function CloudEnvironmentConnectRows({
         }),
       }),
     );
+  };
   const [connectingEnvironmentIds, setConnectingEnvironmentIds] = useState<
     ReadonlySet<EnvironmentId>
   >(new Set());

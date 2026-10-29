@@ -1,4 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
+import { setComputerDismissed } from "../cloud/dismissedComputers";
 import {
   RelayConnectionRegistration,
   RelayConnectionTarget,
@@ -77,19 +78,25 @@ export function useConnectionController() {
     [connectPairingUrlMutation],
   );
   const connectRelayEnvironment = useCallback(
-    (environment: RelayClientEnvironmentRecord) =>
-      registerEnvironment(
+    (environment: RelayClientEnvironmentRecord) => {
+      void setComputerDismissed(environment.environmentId, false);
+      return registerEnvironment(
         new RelayConnectionRegistration({
           target: new RelayConnectionTarget({
             environmentId: environment.environmentId,
             label: environment.label,
           }),
         }),
-      ),
+      );
+    },
     [registerEnvironment],
   );
   const removeEnvironment = useCallback(
-    (environmentId: EnvironmentId) => removeEnvironmentMutation(environmentId),
+    async (environmentId: EnvironmentId) => {
+      const result = await removeEnvironmentMutation(environmentId);
+      if (result._tag === "Success") void setComputerDismissed(environmentId, true);
+      return result;
+    },
     [removeEnvironmentMutation],
   );
   const retryEnvironment = useCallback(

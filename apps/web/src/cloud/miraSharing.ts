@@ -1,7 +1,8 @@
 // Per-account choices that keep automatic account sync from undoing what the user did.
 
 const sharingOffKey = (accountId: string) => `mira:computer-sharing-off:${accountId}`;
-const autoAddedKey = (accountId: string) => `mira:auto-added-computers:v2:${accountId}`;
+// Environment ids are unique, so one list serves every account on this device.
+const DISMISSED_KEY = "mira:dismissed-computers";
 
 export function isComputerSharingOff(accountId: string): boolean {
   return localStorage.getItem(sharingOffKey(accountId)) === "1";
@@ -12,18 +13,19 @@ export function setComputerSharingOff(accountId: string, off: boolean): void {
   else localStorage.removeItem(sharingOffKey(accountId));
 }
 
-/** Computers added automatically once; a computer the user later removes stays removed. */
-export function readAutoAddedComputers(accountId: string): ReadonlySet<string> {
+/** Computers the user removed; account sync does not add them back until the user does. */
+export function readDismissedComputers(): ReadonlySet<string> {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(autoAddedKey(accountId)) ?? "[]");
+    const parsed: unknown = JSON.parse(localStorage.getItem(DISMISSED_KEY) ?? "[]");
     return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : []);
   } catch {
     return new Set();
   }
 }
 
-export function rememberAutoAddedComputer(accountId: string, environmentId: string): void {
-  const ids = new Set(readAutoAddedComputers(accountId));
-  ids.add(environmentId);
-  localStorage.setItem(autoAddedKey(accountId), JSON.stringify([...ids]));
+export function setComputerDismissed(environmentId: string, dismissed: boolean): void {
+  const ids = new Set(readDismissedComputers());
+  if (dismissed) ids.add(environmentId);
+  else ids.delete(environmentId);
+  localStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids]));
 }

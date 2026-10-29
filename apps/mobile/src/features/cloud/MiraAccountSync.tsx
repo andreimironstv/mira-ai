@@ -10,7 +10,6 @@ import {
   watchAccountEvents,
 } from "@t3tools/client-runtime/relay";
 import * as Effect from "effect/Effect";
-import * as SecureStore from "expo-secure-store";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { AppState } from "react-native";
 
@@ -19,25 +18,11 @@ import { relayEnvironmentDiscovery } from "../../state/relay";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { fetchMiraAccount, miraAccess, miraChatHistory, miraChatRemote } from "../chat/miraChat";
 import { useWorkspaceEnvironments } from "../../state/workspace";
+import { readDismissedComputers } from "./dismissedComputers";
 import { resolveCloudPublicConfig } from "./publicConfig";
 
-// SecureStore keys allow only letters, digits, ".", "-", and "_".
 // An admin's change to the plan or limits shows up within this long.
 const ACCOUNT_REFRESH_MS = 30_000;
-
-const autoAddedKey = (accountId: string) =>
-  `mira.autoAddedComputers.v2.${accountId.replace(/[^\w.-]/g, "_")}`;
-
-async function readAutoAdded(accountId: string): Promise<ReadonlySet<string>> {
-  try {
-    const parsed: unknown = JSON.parse(
-      (await SecureStore.getItemAsync(autoAddedKey(accountId))) ?? "[]",
-    );
-    return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : []);
-  } catch {
-    return new Set();
-  }
-}
 
 /** Adds every computer on the signed-in account; one the user removes later stays removed. */
 export function MiraAccountSync() {
@@ -54,9 +39,8 @@ export function MiraAccountSync() {
   const registerEnvironment = useAtomCommand(environmentCatalog.register, {
     reportFailure: false,
   });
-  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<ReadonlySet<string> | null>(null);
   const registering = useRef(new Set<string>());
-  const autoAdded = useRef<Set<string>>(new Set());
 
   // The plan decides chat limits and agentic access; chats follow the account across devices.
   useEffect(() => {
@@ -105,14 +89,16 @@ export function MiraAccountSync() {
   useEffect(() => {
     if (accountId === null) return;
     let cancelled = false;
-    void readAutoAdded(accountId).then((ids) => {
-      if (cancelled) return;
-      autoAdded.current = new Set(ids);
-      setLoadedFor(accountId);
-    });
+    const load = () =>
+      void readDismissedComputers().then((ids) => {
+        if (!cancelled) setDismissed(ids);
+      });
+    load();
     void refreshDiscovery();
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void refreshDiscovery();
+      if (state !== "active") return;
+      load();
+      void refreshDiscovery();
     });
     return () => {
       cancelled = true;
@@ -131,12 +117,12 @@ export function MiraAccountSync() {
   }, [relayReady, relaySession, refreshDiscovery]);
 
   const addAccountComputers = useEffectEvent(() => {
-    if (accountId === null || loadedFor !== accountId) return;
+    if (accountId === null || dismissed === null) return;
     const pending = environmentsToAutoConnect({
       discovered: discovery.environments,
       savedEnvironmentIds: new Set(environments.map((environment) => environment.environmentId)),
       localEnvironmentId: null,
-      previouslyAdded: autoAdded.current,
+      dismissed,
     });
     for (const environment of pending) {
       const id = environment.environmentId;
@@ -146,16 +132,7 @@ export function MiraAccountSync() {
         new RelayConnectionRegistration({
           target: new RelayConnectionTarget({ environmentId: id, label: environment.label }),
         }),
-      ).then((result) => {
-        registering.current.delete(id);
-        // Only a computer that actually got added counts; a failed attempt retries later.
-        if (result._tag !== "Success") return;
-        autoAdded.current.add(id);
-        void SecureStore.setItemAsync(
-          autoAddedKey(accountId),
-          JSON.stringify([...autoAdded.current]),
-        );
-      });
+      ).then(() => registering.current.delete(id));
     }
   });
 
