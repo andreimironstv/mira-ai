@@ -14,19 +14,17 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useResolveClassNames } from "uniwind";
 
-import { AndroidScreenHeader } from "../../components/ui/AndroidScreenHeader";
 import { SymbolView } from "../../components/ui/AppSymbol";
 import { AppText as Text } from "../../components/ui/AppText";
 import * as Dialog from "../../components/ui/Dialog";
 import { EmptyOrb } from "../../components/ui/EmptyOrb";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { FloatingActionButton } from "../../components/ui/FloatingActionButton";
 import { RowPressable } from "../../components/ui/RowPressable";
 import { SearchField } from "../../components/ui/SearchField";
 import { NativeStackScreenOptions } from "../../native/StackHeader";
-import { androidHomeFabPosition } from "../home/AndroidHomeFab.shared";
 import { ThreadSwipeable } from "../home/thread-swipe-actions";
 import { useWorkspaceTabs } from "../workspace/WorkspaceTabsContext";
+import { ChatRoundButton } from "./ChatRoundButton";
 import { miraChatHistory, useMiraChatHistory } from "./miraChat";
 
 const confirmDelete = (chat: SaasChatConversation) =>
@@ -104,13 +102,11 @@ function ChatListRow(props: {
                   {chat.title}
                 </Text>
                 <Text className="text-sm tabular-nums text-foreground-secondary">{time}</Text>
-                {Platform.OS === "ios" ? (
-                  <SymbolView
-                    name="chevron.right"
-                    size={12}
-                    tintColorClassName="accent-icon-subtle"
-                  />
-                ) : null}
+                <SymbolView
+                  name="chevron.right"
+                  size={12}
+                  tintColorClassName="accent-icon-subtle"
+                />
               </View>
               {props.replying ? (
                 <Text className="mt-0.5 font-t3-medium text-sm text-primary">Mira scrie…</Text>
@@ -152,25 +148,35 @@ export function ChatHome() {
   const now = new Date();
   const shown = query.trim() === "" ? chats : chats.filter((chat) => chatMatchesQuery(chat, query));
   return (
-    <View className={Platform.OS === "android" ? "flex-1 bg-header" : "flex-1 bg-screen"}>
+    <View className="flex-1 bg-screen">
       {Platform.OS === "android" ? (
-        <>
+        // iOS draws this header natively; Android matches it: large title, round buttons.
+        <View style={{ paddingTop: insets.top }}>
           <NativeStackScreenOptions options={{ headerShown: false }} />
-          <AndroidScreenHeader
-            title="Chat"
-            actions={[
-              {
-                accessibilityLabel: androidSearching ? "Închide căutarea" : "Caută în chat-uri",
-                icon: androidSearching ? "xmark" : "magnifyingglass",
-                onPress: () => {
-                  if (androidSearching) setQuery("");
-                  setAndroidSearching(!androidSearching);
-                },
-              },
-            ]}
-          />
+          <View className="h-[52px] flex-row items-center justify-end gap-2.5 px-4">
+            <ChatRoundButton
+              accessibilityLabel={androidSearching ? "Închide căutarea" : "Caută în chat-uri"}
+              icon={androidSearching ? "xmark" : "magnifyingglass"}
+              onPress={() => {
+                if (androidSearching) setQuery("");
+                setAndroidSearching(!androidSearching);
+              }}
+            />
+            <ChatRoundButton
+              accessibilityLabel="Chat nou"
+              icon="square.and.pencil"
+              accent
+              onPress={newChat}
+            />
+          </View>
+          <Text
+            accessibilityRole="header"
+            className="px-5 pb-2 font-t3-bold text-[34px] leading-[41px] text-foreground"
+          >
+            Chat
+          </Text>
           {androidSearching ? (
-            <View className="bg-header px-4 pb-3">
+            <View className="px-4 pb-2">
               <SearchField
                 inputRef={searchInput}
                 accessibilityLabel="Caută în chat-uri"
@@ -181,13 +187,9 @@ export function ChatHome() {
               />
             </View>
           ) : null}
-        </>
+        </View>
       ) : null}
-      <View
-        className={
-          Platform.OS === "android" ? "flex-1 overflow-hidden rounded-t-[28px] bg-screen" : "flex-1"
-        }
-      >
+      <View className="flex-1">
         {!loaded ? null : chats.length === 0 ? (
           <View className="flex-1 items-center justify-center px-4">
             <EmptyState
@@ -195,8 +197,8 @@ export function ChatHome() {
               title="Nicio conversație încă"
               detail="Întreabă orice. Mira îți răspunde imediat."
               illustration={<EmptyOrb />}
-              actionLabel={Platform.OS === "android" ? undefined : "Chat nou"}
-              onAction={Platform.OS === "android" ? undefined : newChat}
+              actionLabel="Chat nou"
+              onAction={newChat}
             />
           </View>
         ) : shown.length === 0 ? (
@@ -227,17 +229,6 @@ export function ChatHome() {
           </ScrollView>
         )}
       </View>
-      {Platform.OS === "android" ? (
-        <FloatingActionButton
-          label="Chat nou"
-          icon="plus.bubble"
-          variant="extended"
-          tone="primary"
-          onPress={newChat}
-          className="absolute"
-          style={androidHomeFabPosition(insets.bottom, false)}
-        />
-      ) : null}
     </View>
   );
 }

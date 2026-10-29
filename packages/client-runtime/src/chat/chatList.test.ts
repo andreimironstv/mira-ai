@@ -74,11 +74,11 @@ describe("chatPreview", () => {
     expect(chatPreview(answered)).toBe("Plouă.");
   });
 
-  it("reads the message as plain words", () => {
+  it("reads the message as plain words, leaving out its charts", () => {
     const content = "## Plan\n\n**Buy** [milk](https://x.test)\n\n````visual\n<p>Chart</p>\n````";
-    expect(chatPreview(chat("a", "2026-10-27T00:00:00.000Z", content))).toBe(
-      "Plan Buy milk [Visual: Chart]",
-    );
+    expect(chatPreview(chat("a", "2026-10-27T00:00:00.000Z", content))).toBe("Plan Buy milk");
+    const onlyChart = "````visual\n<p>Iași · 8°C</p>\n````";
+    expect(chatPreview(chat("b", "2026-10-27T00:00:00.000Z", onlyChart))).toBe("Iași · 8°C");
   });
 });
 

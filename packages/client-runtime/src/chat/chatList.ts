@@ -1,6 +1,6 @@
 // @effect-diagnostics globalDate:off - Chat labels follow the device's local calendar days, outside an Effect runtime.
 import type { SaasChatConversation } from "@t3tools/contracts/saas";
-import { chatVisualsAsText } from "@t3tools/shared/htmlRender";
+import { chatVisualsAsText, splitChatVisuals } from "@t3tools/shared/htmlRender";
 
 export interface ChatListSection {
   readonly title: string;
@@ -60,7 +60,7 @@ export function chatTimeLabel(updatedAt: string, now: Date): string {
 }
 
 const plainText = (markdown: string) =>
-  chatVisualsAsText(markdown)
+  markdown
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/[`*_>#~|]+/g, "")
     .replace(/\s+/g, " ")
@@ -71,10 +71,16 @@ export function chatPreview(chat: SaasChatConversation): string {
   const last =
     chat.messages.findLast((message) => message.role === "assistant") ?? chat.messages.at(-1);
   if (last === undefined) return "";
-  return (plainText(last.content) || last.attachments?.[0]?.name || "").slice(
-    0,
-    MAX_PREVIEW_LENGTH,
-  );
+  // The words around a chart say more than its outline; the outline is the fallback.
+  const words = splitChatVisuals(last.content)
+    .flatMap((segment) => (segment.kind === "markdown" ? [segment.text] : []))
+    .join(" ");
+  return (
+    plainText(words) ||
+    plainText(chatVisualsAsText(last.content).replace(/^\[Visual: (.*)\]$/s, "$1")) ||
+    last.attachments?.[0]?.name ||
+    ""
+  ).slice(0, MAX_PREVIEW_LENGTH);
 }
 
 const folded = (text: string) =>
