@@ -167,6 +167,17 @@ export function useCloudLinkController() {
         currentLinkState.cloudUserId !== userId ||
         currentManagedTunnel !== desired.managedTunnel
       ) {
+        // The server refuses to switch accounts in place; the old account's relay link stays as is.
+        if (currentLinkState.cloudUserId !== null && currentLinkState.cloudUserId !== userId) {
+          const unlinkResult = await unlinkPrimaryEnvironment({ target, clerkToken: null });
+          if (unlinkResult._tag === "Failure") {
+            if (!isAtomCommandInterrupted(unlinkResult)) {
+              reportUpdateFailure(squashAtomCommandFailure(unlinkResult));
+            }
+            primaryCloudLinkState.refresh();
+            return false;
+          }
+        }
         const linkResult = await linkPrimaryEnvironment({
           target,
           clerkToken,
