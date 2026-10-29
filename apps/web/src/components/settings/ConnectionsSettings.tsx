@@ -1037,7 +1037,7 @@ export function ConnectionsSettings() {
 
   const primarySettings = (
     <>
-      <MiraAccountSettings />
+      {hasCloudPublicConfig() ? <MiraAccountSettings /> : null}
       {primaryEnvironmentId !== null ? (
         <>
           <SettingsSection
