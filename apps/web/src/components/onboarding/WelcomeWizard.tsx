@@ -41,7 +41,9 @@ export function WelcomeWizard({
   readonly resumeEnvironmentId?: EnvironmentId | undefined;
   readonly onDone: (projectRef?: ScopedProjectRef) => void | Promise<void>;
 }) {
-  const [step, setStep] = useState<WizardStep>(resumeEnvironmentId ? "agents" : "account");
+  const [step, setStep] = useState<WizardStep>(
+    resumeEnvironmentId || !hasCloudPublicConfig() ? "agents" : "account",
+  );
   const { environments } = useEnvironments();
   const finishingPromiseRef = useRef<Promise<boolean> | null>(null);
   const completionErrorToastIdRef = useRef<ReturnType<typeof toastManager.add> | null>(null);
