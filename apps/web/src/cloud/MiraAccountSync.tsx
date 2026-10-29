@@ -29,7 +29,12 @@ import {
   MIRA_PI_INSTANCE_ID,
   miraPiInstance,
 } from "./miraAccount";
-import { isComputerSharingOff, readDismissedComputers } from "./miraSharing";
+import {
+  isComputerSharingOff,
+  readDismissedComputers,
+  readModelKeyAccount,
+  setModelKeyAccount,
+} from "./miraSharing";
 import { miraAccess, miraChatHistory, miraChatRemote } from "./miraChat";
 import { fetchMiraAccount } from "./miraAccount";
 import { resolveClerkSignInProps } from "../components/clerk/authRedirect";
@@ -159,7 +164,8 @@ export function MiraAccountSync() {
 
   const connectModel = useEffectEvent((account: string) => {
     if (primaryEnvironmentId === null || serverConfig === null) return;
-    if (modelAttemptedFor.current === account || hasMiraEnvironment(serverConfig.settings)) return;
+    if (modelAttemptedFor.current === account) return;
+    if (hasMiraEnvironment(serverConfig.settings) && readModelKeyAccount() === account) return;
     modelAttemptedFor.current = account;
     void (async () => {
       const key = await issueMiraModelKey();
@@ -175,6 +181,7 @@ export function MiraAccountSync() {
         },
       });
       if (result._tag === "Failure") throw squashAtomCommandFailure(result);
+      setModelKeyAccount(account);
     })().catch((cause: unknown) => {
       // Retried on the next sign-in or restart; onboarding and Settings surface the error.
       console.warn("[mira] Could not connect the Mira model", cause);

@@ -3,6 +3,16 @@
 const sharingOffKey = (accountId: string) => `mira:computer-sharing-off:${accountId}`;
 // Environment ids are unique, so one list serves every account on this device.
 const DISMISSED_KEY = "mira:dismissed-computers";
+const MODEL_KEY_ACCOUNT_KEY = "mira:model-key-account";
+
+/** The account whose model key Pi on this computer uses; a switch needs a key of its own. */
+export function readModelKeyAccount(): string | null {
+  return localStorage.getItem(MODEL_KEY_ACCOUNT_KEY);
+}
+
+export function setModelKeyAccount(accountId: string): void {
+  localStorage.setItem(MODEL_KEY_ACCOUNT_KEY, accountId);
+}
 
 export function isComputerSharingOff(accountId: string): boolean {
   return localStorage.getItem(sharingOffKey(accountId)) === "1";
