@@ -1,4 +1,4 @@
-export const NAVIGATION_TAB_ORDER = ["chats", "threads", "usage"] as const;
+export const NAVIGATION_TAB_ORDER = ["chats", "threads"] as const;
 // Pull requests keep their screens for links, but Mira gives them no tab.
 export type NavigationTab = (typeof NAVIGATION_TAB_ORDER)[number] | "pullRequests";
 
@@ -9,10 +9,9 @@ export function navigationCustomizationAvailable(
 }
 
 export const NAVIGATION_TAB_LABELS: Readonly<Record<NavigationTab, string>> = {
-  chats: "Chat-uri",
+  chats: "Chat",
   threads: "Agent",
   pullRequests: "Pulls",
-  usage: "Utilizare",
 };
 
 function isNavigationTab(value: unknown): value is NavigationTab {

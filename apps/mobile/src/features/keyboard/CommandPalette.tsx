@@ -78,7 +78,7 @@ const ACTION_ICONS: Record<string, AppSymbolName> = {
   newTask: "square.and.pencil",
   newThread: "square.and.pencil",
   addProject: "folder.badge.plus",
-  settings: "gearshape",
+  settings: "person.crop.circle",
   appearance: "paintbrush",
   environments: "desktopcomputer",
   usage: "chart.bar.xaxis",
@@ -284,8 +284,8 @@ export function CommandPalette(props: {
       {
         key: "settings",
         kind: "action",
-        title: "Deschide setările",
-        searchTerms: ["preferences", "configuration"],
+        title: "Deschide contul",
+        searchTerms: ["setări", "settings", "preferences", "configuration"],
         run: () => selectTab("settings"),
       },
       {

@@ -400,7 +400,7 @@ describe("chat mode search and attachments", () => {
       expect(searches).toHaveLength(3);
       const turns = harness.sent.filter((request) => !request.url.endsWith("/v1/tools/search"));
       for (const turn of turns) {
-        expect(sentJson(turn)?.tools).toHaveLength(2);
+        expect(sentJson(turn)?.tools).toHaveLength(3);
         expect(sentJson(turn)?.tool_choice).toBeUndefined();
       }
     }),
@@ -432,6 +432,77 @@ describe("chat mode search and attachments", () => {
         role: "tool",
         tool_call_id: "call_1",
       });
+    }),
+  );
+
+  const miraEvents = (body: string) =>
+    body.split("\n\n").flatMap((event) => {
+      const data = event.replace(/^data: /, "");
+      if (data === "" || data === "[DONE]") return [];
+      const mira = JSON.parse(data).mira;
+      return mira === undefined ? [] : [mira];
+    });
+
+  it.effect("ends a written answer with its suggested replies, without another model turn", () =>
+    Effect.gen(function* () {
+      const harness = makeHarness({
+        upstream: () =>
+          stream(
+            { choices: [{ delta: { content: "Yes, in installments." } }] },
+            toolCall(
+              "call_1",
+              "suggest_replies",
+              JSON.stringify({
+                replies: ["Write the request", " ", "x".repeat(61), "What papers?"],
+              }),
+            ),
+          ),
+      });
+      const body = yield* readText(yield* harness.chatMode(device));
+      expect(streamedContent(body)).toBe("Yes, in installments.");
+      expect(miraEvents(body)).toContainEqual({
+        suggestions: ["Write the request", "What papers?"],
+      });
+      expect(body.endsWith("data: [DONE]\n\n")).toBe(true);
+      expect(harness.sent).toHaveLength(1);
+    }),
+  );
+
+  it.effect("keeps going when the model suggests replies before writing its answer", () =>
+    Effect.gen(function* () {
+      let modelTurns = 0;
+      const harness = makeHarness({
+        upstream: () => {
+          modelTurns += 1;
+          return modelTurns === 1
+            ? stream(toolCall("call_1", "suggest_replies", '{"replies":["More"]}'))
+            : stream({ choices: [{ delta: { content: "The answer." } }] });
+        },
+      });
+      const body = yield* readText(yield* harness.chatMode(device));
+      expect(streamedContent(body)).toBe("The answer.");
+      expect(lastMessage(harness.sent.at(-1)!)).toMatchObject({
+        role: "tool",
+        tool_call_id: "call_1",
+      });
+    }),
+  );
+
+  it.effect("tells a device without an account how many free messages it has left", () =>
+    Effect.gen(function* () {
+      const harness = makeHarness({
+        anonymousDailyChatLimit: 10,
+        plan: { dailyChatLimit: 5 },
+        upstream: () => stream({ choices: [{ delta: { content: "Hi." } }] }),
+      });
+      yield* readText(yield* harness.chatMode(device));
+      expect(miraEvents(yield* readText(yield* harness.chatMode(device)))).toContainEqual({
+        remaining: 8,
+      });
+      const signedIn = yield* readText(
+        yield* harness.chatMode({ authorization: "Bearer clerk-valid" }),
+      );
+      expect(miraEvents(signedIn)).toEqual([]);
     }),
   );
 

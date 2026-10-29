@@ -24,6 +24,11 @@ export function MainAppLocationTracker() {
   return null;
 }
 
+/** The path of the last main-app page, for views that follow it from Settings or Usage. */
+export function lastMainAppPathname(): string | null {
+  return mainAppHref === null ? null : (mainAppHref.split(/[?#]/)[0] ?? null);
+}
+
 export function useNavigateToMainApp() {
   const navigate = useNavigate();
   return () => navigate({ href: mainAppHref ?? "/" });

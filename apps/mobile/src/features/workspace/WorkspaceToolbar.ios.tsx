@@ -20,6 +20,7 @@ import { useCompactWorkspaceTabs, useSidebarWorkspaceTabs } from "./useSystemWor
 import { WorkspaceTabToolbarButtons } from "./WorkspaceSectionToolbar";
 
 const SEARCH_LABELS = {
+  chats: "Caută în chat-uri",
   threads: "Caută conversații",
   pullRequests: "Caută pull request-uri",
   settings: "Caută în setări",
@@ -27,6 +28,7 @@ const SEARCH_LABELS = {
 
 export function WorkspaceToolbar(props: {
   readonly onNewTask: () => void;
+  readonly onNewChat?: () => void;
   readonly sidebar?: boolean;
 }) {
   const workspace = useWorkspaceTabs()!;
@@ -50,8 +52,7 @@ export function WorkspaceToolbar(props: {
   // The Settings list takes the selected tab's place, so search follows it.
   const selectedTab = workspace.settingsOpen ? "settings" : workspace.state.selectedTab;
   const tab = workspace.state.tabs[selectedTab];
-  const searchLabel =
-    SEARCH_LABELS[selectedTab === "usage" || selectedTab === "chats" ? "threads" : selectedTab];
+  const searchLabel = SEARCH_LABELS[selectedTab];
   const { isTabActive: isListTabActive } = workspace;
   const isTabActive = useCallback(
     // A retained tab slot stays mounted while another is shown.
@@ -191,6 +192,13 @@ export function WorkspaceToolbar(props: {
           {searchButton}
           {nativeToolbarCompose && foldedSearch ? <Toolbar.Spacer width={8} /> : null}
           {composeButton}
+          {selectedTab === "chats" && props.onNewChat ? (
+            <Toolbar.Button
+              accessibilityLabel="Chat nou"
+              icon="square.and.pencil"
+              onPress={props.onNewChat}
+            />
+          ) : null}
           {selectedTab !== "threads" ||
           isDuoDevice(deviceType) ||
           deviceType === "pad" ||

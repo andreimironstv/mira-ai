@@ -241,7 +241,7 @@ const SETTINGS_SCREENS = {
     linking: "settings",
     options: {
       ...SETTINGS_PAGE_OPTIONS,
-      title: "Setări",
+      title: "Cont",
       ...(Platform.OS === "android" ? { animation: "none" as const } : {}),
       // Android draws its own app bar here. Hidden only from inside the screen, the native one
       // showed for the first frame of the Settings tab and pushed the page down.

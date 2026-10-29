@@ -23,8 +23,8 @@ describe("navigation tab order", () => {
 
   it("fills missing sections and drops removed placeholders, duplicates, and Settings", () => {
     expect(
-      resolveNavigationTabOrder(["usage", "home", "issues", "settings", "usage", null]),
-    ).toEqual(["usage", "chats", "threads"]);
+      resolveNavigationTabOrder(["threads", "usage", "issues", "settings", "threads", null]),
+    ).toEqual(["threads", "chats"]);
     expect(resolveNavigationTabOrder()).toEqual(NAVIGATION_TAB_ORDER);
   });
 
@@ -44,15 +44,15 @@ describe("navigation tab order", () => {
     expect(visibleNavigationTabs()).toEqual(NAVIGATION_TAB_ORDER);
     expect(overflowNavigationTabs()).toEqual([]);
     expect(selectedNavigationTab(undefined, "threads", true)).toBe("settings");
-    expect(selectedNavigationTab(undefined, "usage", false)).toBe("usage");
-    expect(selectedNavigationTab(undefined, "usage", false, [], 2)).toBe("settings");
+    expect(selectedNavigationTab(undefined, "threads", false)).toBe("threads");
+    expect(selectedNavigationTab(undefined, "threads", false, [], 1)).toBe("settings");
   });
 
   it("removes hidden sections from navigation and restores their saved positions", () => {
-    const order = moveNavigationTab(undefined, "usage", 0);
-    const hidden = toggleNavigationTabVisibility([], "usage");
-    expect(enabledNavigationTabs(order, hidden)).toEqual(["chats", "threads"]);
-    expect(toggleNavigationTabVisibility(hidden, "usage")).toEqual([]);
+    const order = moveNavigationTab(undefined, "threads", 0);
+    const hidden = toggleNavigationTabVisibility([], "threads");
+    expect(enabledNavigationTabs(order, hidden)).toEqual(["chats"]);
+    expect(toggleNavigationTabVisibility(hidden, "threads")).toEqual([]);
     expect(visibleNavigationTabs(order, [], 5)).toEqual(order);
     expect(enabledNavigationTabs(undefined, ["home", "issues", "settings"])).toEqual(
       NAVIGATION_TAB_ORDER,
@@ -61,7 +61,7 @@ describe("navigation tab order", () => {
 
   it("falls back when the selected section is hidden, including when all are hidden", () => {
     expect(resolveSelectedNavigationTab(undefined, ["chats"], "chats")).toBe("threads");
-    expect(resolveSelectedNavigationTab(undefined, ["threads"], "usage")).toBe("usage");
+    expect(resolveSelectedNavigationTab(undefined, ["threads"], "chats")).toBe("chats");
     expect(
       resolveSelectedNavigationTab(undefined, NAVIGATION_TAB_ORDER, "threads"),
     ).toBeUndefined();

@@ -1,7 +1,7 @@
 import { WorkspaceNoTabs } from "./WorkspaceNoTabs";
 import { useEnabledNavigationTabs } from "./navigation-tabs";
 import { NAVIGATION_TAB_ORDER } from "./navigation-tab-order";
-import { WorkspaceExtraTab } from "./WorkspaceExtraTab";
+import { ChatHome } from "../chat/ChatHome";
 import { useMemo } from "react";
 import { View } from "react-native";
 import { SafeAreaInsetsContext, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -46,8 +46,8 @@ export function WorkspaceRootScreen() {
         renderTab={(tab) =>
           tab === "threads" ? (
             <HomeRouteScreen />
-          ) : tab !== "pullRequests" ? (
-            <WorkspaceExtraTab tab={tab} />
+          ) : tab === "chats" ? (
+            <ChatHome />
           ) : (
             <>
               <NativeStackScreenOptions options={{ headerShown: false }} />
@@ -80,8 +80,8 @@ export function WorkspaceRootScreen() {
               renderTab={(tab) =>
                 tab === "threads" ? (
                   <HomeRouteScreen />
-                ) : tab !== "pullRequests" ? (
-                  <WorkspaceExtraTab tab={tab} />
+                ) : tab === "chats" ? (
+                  <ChatHome />
                 ) : (
                   <PullRequestFilterMenuProvider>
                     <PullRequestToolbar />

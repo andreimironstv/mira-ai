@@ -51,9 +51,9 @@ export function createSidebarHeaderItems(input: {
     withNativeGlassHeaderItem({
       type: "button",
       axisBehavior: "horizontalOnly",
-      label: "Setări",
-      accessibilityLabel: "Deschide setările",
-      icon: sfSymbolIcon("gearshape"),
+      label: "Cont",
+      accessibilityLabel: "Deschide contul",
+      icon: sfSymbolIcon("person.crop.circle"),
       onPress: input.onOpenSettings,
     }),
   ];

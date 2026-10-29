@@ -245,12 +245,4 @@ describe("Android Settings tab", () => {
     expect(list.routes[0]?.key).toBe(previous.routes[0]?.key);
     expect(selectedTab(list, "pullRequests")).toBe("pullRequests");
   });
-
-  it("leaves a settings page opened from the Usage tab in that tab", () => {
-    const account = apply(
-      router.getInitialState(options),
-      StackActions.push("SettingsUsageAccount"),
-    );
-    expect(selectedTab(account, "usage")).toBe("usage");
-  });
 });

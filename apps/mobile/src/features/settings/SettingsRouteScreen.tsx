@@ -72,7 +72,7 @@ export function SettingsRouteScreen() {
         <ScreenScrollViewBottomInset value={deviceType === "pad" || compactTabs ? 80 : 0}>
           {Platform.OS === "android" ? (
             <SettingsScreen
-              title="Setări"
+              title="Cont"
               trailing={<AndroidSettingsEnvironmentFilter />}
               search={
                 workspace
@@ -116,7 +116,7 @@ function ConfiguredSettingsRouteScreen() {
 
   return (
     <SettingsList
-      connections={[
+      account={[
         {
           id: "account",
           icon: "person.crop.circle",
@@ -125,6 +125,9 @@ function ConfiguredSettingsRouteScreen() {
           disabled: !isLoaded,
           onPress: () => navigation.navigate("SettingsAuth"),
         },
+        USAGE_ROW,
+      ]}
+      connections={[
         environmentsRow(Object.keys(savedConnectionsById).length),
         {
           id: "SettingsNotifications",
@@ -139,8 +142,20 @@ function ConfiguredSettingsRouteScreen() {
 
 function LocalSettingsRouteScreen() {
   const { savedConnectionsById } = useSavedRemoteConnections();
-  return <SettingsList connections={[environmentsRow(Object.keys(savedConnectionsById).length)]} />;
+  return (
+    <SettingsList
+      account={[USAGE_ROW]}
+      connections={[environmentsRow(Object.keys(savedConnectionsById).length)]}
+    />
+  );
 }
+
+const USAGE_ROW: SettingsListRow = {
+  id: "SettingsUsage",
+  icon: "chart.bar.xaxis",
+  label: "Utilizare",
+  target: "SettingsUsage",
+};
 
 function environmentsRow(count: number): SettingsListRow {
   return {
@@ -153,7 +168,10 @@ function environmentsRow(count: number): SettingsListRow {
   };
 }
 
-function SettingsList(props: { readonly connections: readonly SettingsListRow[] }) {
+function SettingsList(props: {
+  readonly account: readonly SettingsListRow[];
+  readonly connections: readonly SettingsListRow[];
+}) {
   // UIKit's scroll-edge material takes the scroll view's own color; like the chat list, match
   // the sidebar's surface so the bar doesn't darken over content at rest.
   // Grouped cards only lift off the screen surface; the drawer is as dark as they are.
@@ -164,7 +182,12 @@ function SettingsList(props: { readonly connections: readonly SettingsListRow[] 
   const overflowRows = useOverflowRows();
   const indexSections = useSettingsIndexSections();
   const sections = filterSettingsSections(
-    [{ rows: overflowRows }, { title: "Conexiuni", rows: props.connections }, ...indexSections],
+    [
+      { rows: overflowRows },
+      { title: "Cont", rows: props.account },
+      { title: "Conexiuni", rows: props.connections },
+      ...indexSections,
+    ],
     query,
   );
 

@@ -29,15 +29,20 @@ import {
   MAX_SEARCH_ROUNDS,
   ModelTurnReader,
   SHOW_VISUAL_TOOL,
+  SUGGEST_REPLIES_TOOL,
+  SUGGESTIONS_SHOWN_RESULT,
   VISUAL_FAILED_RESULT,
   VISUAL_SHOWN_RESULT,
   WEB_SEARCH_TOOL,
   contentEvent,
   doneEvent,
   formatSearchResults,
+  remainingEvent,
   searchQuery,
   searchRequestBody,
   searchingEvent,
+  suggestedReplies,
+  suggestionsEvent,
   visualHtml,
 } from "./chatSearch.ts";
 import * as SaasAccounts from "./SaasAccounts.ts";
@@ -51,7 +56,7 @@ const MAX_MODEL_TURNS = 6;
 // Leaves room in the model's context for search results and the reply.
 const MAX_HISTORY_CHARS = 240_000;
 const chatSystemPrompt = (today: string) =>
-  `You are Mira, a friendly and helpful assistant. Today is ${today}. Always answer in the language of the user's latest message. Answer clearly. When you use web search results, mention the sources.
+  `You are Mira, a friendly and helpful assistant. Today is ${today}. Always answer in the language of the user's latest message. Answer clearly. When you use web search results, mention the sources. After the answer, when the user would naturally continue, call suggest_replies.
 
 ${CHAT_VISUAL_GUIDE}`;
 
@@ -317,6 +322,7 @@ export const make = Effect.gen(function* () {
       return {
         subjects: [`user:${userId.value}`] as ReadonlyArray<SaasChat.ChatSubject>,
         isOver: ([count = 0]: ReadonlyArray<number>) => SaasChat.isOverLimit(count, limit),
+        remaining: (_counts: ReadonlyArray<number>): number | null => null,
         overLimit: () =>
           chatError(
             429,
@@ -340,6 +346,8 @@ export const make = Effect.gen(function* () {
         limit === 0 ||
         SaasChat.isOverLimit(device, limit) ||
         SaasChat.isOverLimit(address, limit * SaasChat.ANONYMOUS_IP_LIMIT_MULTIPLIER),
+      remaining: ([device = 0]: ReadonlyArray<number>): number | null =>
+        Math.max(0, limit - device),
       overLimit: () =>
         chatError(
           429,
@@ -361,7 +369,8 @@ export const make = Effect.gen(function* () {
       }
       const chatter = yield* resolveChatter(request);
       if (HttpServerResponse.isHttpServerResponse(chatter)) return chatter;
-      if (chatter.isOver(yield* chats.countMessage(chatter.subjects))) return chatter.overLimit();
+      const counts = yield* chats.countMessage(chatter.subjects);
+      if (chatter.isOver(counts)) return chatter.overLimit();
 
       const access = yield* accounts.getModelAccess;
       if (access.apiKey === null) {
@@ -377,6 +386,7 @@ export const make = Effect.gen(function* () {
         model: access.model,
         effort: access.chatReasoningEffort,
         messages: [{ role: "system", content: chatSystemPrompt(today) }, ...messages],
+        remaining: chatter.remaining(counts),
         onUsage: (usage) => recordChat(subject, usage),
       });
     },
@@ -403,7 +413,7 @@ export const make = Effect.gen(function* () {
           ...reasoningFields(input.effort),
           messages: input.messages,
           // Every turn declares every tool: DeepSeek writes calls to undeclared or forbidden tools as text.
-          tools: [WEB_SEARCH_TOOL, SHOW_VISUAL_TOOL],
+          tools: [WEB_SEARCH_TOOL, SHOW_VISUAL_TOOL, SUGGEST_REPLIES_TOOL],
         }),
       ),
     );
@@ -433,6 +443,7 @@ export const make = Effect.gen(function* () {
     readonly model: string;
     readonly effort: SaasReasoningEffort;
     readonly messages: ReadonlyArray<unknown>;
+    readonly remaining: number | null;
     readonly onUsage: (usage: TokenUsage | undefined) => Effect.Effect<void>;
   }) {
     const first = yield* modelTurn(input);
@@ -463,10 +474,23 @@ export const make = Effect.gen(function* () {
           usage.inputTokens += reader.inputTokens;
           usage.outputTokens += reader.outputTokens;
           const calls = reader.toolCalls;
+          const suggesting = calls.filter(
+            (call) => call.name === SUGGEST_REPLIES_TOOL.function.name,
+          );
+          // Suggestions close a written answer; called alone before any text, the model still owes it.
+          if (suggesting.length === calls.length && reader.content.trim() !== "") {
+            const suggestions = suggesting.flatMap(suggestedReplies);
+            return suggestions.length === 0
+              ? Stream.empty
+              : Stream.make(suggestionsEvent(suggestions));
+          }
           if (calls.length === 0 || round + 1 >= MAX_MODEL_TURNS) return Stream.empty;
           const results = yield* Effect.forEach(
             calls,
             (call) => {
+              if (call.name === SUGGEST_REPLIES_TOOL.function.name) {
+                return Effect.succeed(SUGGESTIONS_SHOWN_RESULT);
+              }
               if (call.name === SHOW_VISUAL_TOOL.function.name) {
                 return Effect.succeed(
                   visualHtml(call) === undefined ? VISUAL_FAILED_RESULT : VISUAL_SHOWN_RESULT,
@@ -523,7 +547,10 @@ export const make = Effect.gen(function* () {
       );
     };
 
-    const body = turn(first, input.messages, 0).pipe(
+    const body = Stream.concat(
+      input.remaining === null ? Stream.empty : Stream.make(remainingEvent(input.remaining)),
+      turn(first, input.messages, 0),
+    ).pipe(
       Stream.concat(Stream.make(doneEvent())),
       Stream.ensuring(Effect.suspend(() => input.onUsage(usage))),
     );

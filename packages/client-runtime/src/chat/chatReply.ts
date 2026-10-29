@@ -10,7 +10,13 @@ import * as Schema from "effect/Schema";
 export type ChatReplyErrorCode = SaasChatErrorCode | "network";
 
 export type ChatReplyResult =
-  | { readonly ok: true; readonly text: string }
+  | {
+      readonly ok: true;
+      readonly text: string;
+      readonly suggestions?: ReadonlyArray<string>;
+      /** Free messages left today for someone without an account; absent with one. */
+      readonly remaining?: number;
+    }
   | { readonly ok: false; readonly code: ChatReplyErrorCode; readonly message: string };
 
 export interface ChatReplyRequest {
@@ -34,7 +40,13 @@ export interface ChatReplyRequest {
 const decodeChunk = Schema.decodeUnknownOption(
   Schema.fromJsonString(
     Schema.Struct({
-      mira: Schema.optionalKey(Schema.Struct({ status: Schema.String })),
+      mira: Schema.optionalKey(
+        Schema.Struct({
+          status: Schema.optionalKey(Schema.String),
+          suggestions: Schema.optionalKey(Schema.Array(Schema.String)),
+          remaining: Schema.optionalKey(Schema.Number),
+        }),
+      ),
       choices: Schema.optionalKey(
         Schema.Array(
           Schema.Struct({
@@ -62,6 +74,8 @@ export class ChatSseDecoder {
   searching = false;
   /** The relay's closing `[DONE]` arrived, so the reply is whole. */
   done = false;
+  suggestions: ReadonlyArray<string> = [];
+  remaining: number | null = null;
 
   /** Returns whether the text grew. */
   push(chunk: string): boolean {
@@ -89,7 +103,10 @@ export class ChatSseDecoder {
     if (data === "" || data === "[DONE]") return;
     const chunk = decodeChunk(data);
     if (Option.isNone(chunk)) return;
-    if (chunk.value.mira?.status === "searching") this.searching = true;
+    const mira = chunk.value.mira;
+    if (mira?.status === "searching") this.searching = true;
+    if (mira?.suggestions !== undefined) this.suggestions = mira.suggestions;
+    if (mira?.remaining !== undefined) this.remaining = mira.remaining;
     for (const choice of chunk.value.choices ?? []) {
       const content = choice.delta?.content ?? "";
       if (content === "") continue;
@@ -152,5 +169,10 @@ export async function requestChatReply(request: ChatReplyRequest): Promise<ChatR
     // Half a reply would be saved as if it were whole; retrying asks for all of it again.
     return failure("network", "Răspunsul s-a întrerupt. Încearcă din nou.");
   }
-  return { ok: true, text: decoder.text };
+  return {
+    ok: true,
+    text: decoder.text,
+    suggestions: decoder.suggestions,
+    ...(decoder.remaining === null ? {} : { remaining: decoder.remaining }),
+  };
 }

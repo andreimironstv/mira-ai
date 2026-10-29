@@ -54,6 +54,10 @@ export interface ChatHistoryState {
     readonly searching?: boolean;
   } | null;
   readonly error: ChatReplyError | null;
+  /** Chats with a reply that arrived here while they were not open. */
+  readonly unread: ReadonlySet<string>;
+  /** Free messages left today without an account, once the relay has said; else null. */
+  readonly freeMessagesLeft: number | null;
 }
 
 const MAX_TITLE_LENGTH = 60;
@@ -67,6 +71,13 @@ const StoredHistory = Schema.Struct({
   dirty: Schema.Array(Schema.String),
   /** Known to the relay, so a missing one there was deleted on another device. */
   synced: Schema.Array(Schema.String),
+  /**
+   * How far each chat was read on this device. Only chats asked from here have an entry, so
+   * history arriving from other devices never shows as unread.
+   */
+  seen: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  /** The relay's last count of free messages, for the UTC day it counted. */
+  freeMessages: Schema.optionalKey(Schema.Struct({ day: Schema.String, left: Schema.Number })),
 });
 type StoredHistory = typeof StoredHistory.Type;
 const StoredHistoryJson = Schema.fromJsonString(StoredHistory);
@@ -78,6 +89,20 @@ export const chatTitle = (text: string) => {
   if (line === "") return "Chat nou";
   return line.length > MAX_TITLE_LENGTH ? `${line.slice(0, MAX_TITLE_LENGTH - 1)}…` : line;
 };
+
+// The relay counts free messages per UTC day.
+const utcDay = (iso: string) => iso.slice(0, "YYYY-MM-DD".length);
+
+const unreadChats = (chats: ReadonlyArray<SaasChatConversation>, seen: StoredHistory["seen"]) =>
+  new Set(
+    chats.flatMap((chat) => {
+      const last = chat.messages.at(-1);
+      const readTo = seen?.[chat.id];
+      return last?.role === "assistant" && readTo !== undefined && last.createdAt > readTo
+        ? [chat.id]
+        : [];
+    }),
+  );
 
 const byNewest = (left: SaasChatConversation, right: SaasChatConversation) =>
   right.updatedAt.localeCompare(left.updatedAt);
@@ -101,7 +126,14 @@ export interface ChatHistoryOptions {
  * change also goes to the relay, so the account's other devices see the same history.
  */
 export class ChatHistory {
-  private state: ChatHistoryState = { loaded: false, chats: [], streaming: null, error: null };
+  private state: ChatHistoryState = {
+    loaded: false,
+    chats: [],
+    streaming: null,
+    error: null,
+    unread: new Set(),
+    freeMessagesLeft: null,
+  };
   private stored: StoredHistory;
   private readonly listeners = new Set<() => void>();
   private remote: ChatHistoryRemote | null = null;
@@ -143,7 +175,7 @@ export class ChatHistory {
         const stored = raw === null ? Option.none() : decodeStored(raw);
         if (Option.isSome(stored)) this.stored = stored.value;
         else void this.persist();
-        this.publish({ loaded: true, chats: [...this.stored.chats].sort(byNewest) });
+        this.publish({ loaded: true, ...this.derived() });
       });
     return this.loading;
   }
@@ -280,6 +312,7 @@ export class ChatHistory {
           updatedAt: now,
           messages: [userMessage],
         };
+    this.stored = { ...this.stored, seen: { ...this.stored.seen, [chat.id]: now } };
     this.write(chat);
     options.onStarted?.(chat.id);
     await this.reply(chat);
@@ -331,14 +364,30 @@ export class ChatHistory {
         ? result.text
         : "";
     const latest = this.find(chat.id);
+    if (result.ok && result.remaining !== undefined) {
+      this.stored = {
+        ...this.stored,
+        freeMessages: { day: utcDay(this.now()), left: result.remaining },
+      };
+    } else if (!result.ok && result.code === "sign_up_required") {
+      this.stored = { ...this.stored, freeMessages: { day: utcDay(this.now()), left: 0 } };
+      this.commit();
+    }
     if (latest !== undefined && text !== "") {
       const repliedAt = this.now();
+      const suggestions = !stopped && result.ok ? (result.suggestions ?? []) : [];
       this.write({
         ...latest,
         updatedAt: repliedAt,
         messages: [
           ...latest.messages,
-          { id: messageId, role: "assistant", content: text, createdAt: repliedAt },
+          {
+            id: messageId,
+            role: "assistant",
+            content: text,
+            createdAt: repliedAt,
+            ...(suggestions.length > 0 ? { suggestions } : {}),
+          },
         ],
       });
       this.publish({ streaming: null });
@@ -361,13 +410,23 @@ export class ChatHistory {
 
   remove(chatId: string) {
     if (this.find(chatId) === undefined) return;
+    const { [chatId]: _removed, ...seen } = this.stored.seen ?? {};
     this.stored = {
       ...this.stored,
+      seen,
       chats: this.stored.chats.filter((chat) => chat.id !== chatId),
       dirty: [...new Set([...this.stored.dirty, chatId])],
     };
     this.commit();
     void this.sync();
+  }
+
+  /** Marks a chat read up to its latest message, as when it is open on screen. */
+  markSeen(chatId: string) {
+    const chat = this.find(chatId);
+    if (chat === undefined || this.stored.seen?.[chatId] === chat.updatedAt) return;
+    this.stored = { ...this.stored, seen: { ...this.stored.seen, [chatId]: chat.updatedAt } };
+    this.commit();
   }
 
   clearError() {
@@ -390,7 +449,19 @@ export class ChatHistory {
 
   private commit() {
     void this.persist();
-    this.publish({ chats: [...this.stored.chats].sort(byNewest) });
+    this.publish(this.derived());
+  }
+
+  private derived() {
+    const freeMessages = this.stored.freeMessages;
+    return {
+      chats: [...this.stored.chats].sort(byNewest),
+      unread: unreadChats(this.stored.chats, this.stored.seen),
+      freeMessagesLeft:
+        freeMessages !== undefined && freeMessages.day === utcDay(this.now())
+          ? freeMessages.left
+          : null,
+    };
   }
 
   private persist() {

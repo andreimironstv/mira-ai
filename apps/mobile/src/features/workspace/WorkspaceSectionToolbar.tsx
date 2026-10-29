@@ -46,8 +46,8 @@ export function WorkspaceTabToolbarButtons() {
       ))}
       <Toolbar.Button
         identifier="workspace-tab-settings"
-        accessibilityLabel="Setări"
-        icon="gearshape"
+        accessibilityLabel="Cont"
+        icon="person.crop.circle"
         tintColor={selected === "settings" ? selectedTint : undefined}
         onPress={() => selectTab("settings")}
       />
