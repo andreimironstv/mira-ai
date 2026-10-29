@@ -82,6 +82,7 @@ import * as MobileRegistrations from "../agentActivity/MobileRegistrations.ts";
 import { withSpanAttributes } from "../observability.ts";
 import { isRelayHookPath, redactRelayHookUrl } from "../hooks/HookForwarder.ts";
 import * as RelayDb from "../db.ts";
+import { SAAS_CHAT_DEVICE_HEADER, SAAS_CHAT_FILE_NAME_HEADER } from "@t3tools/contracts/saas";
 
 // Delegated IDs exceed the router's default 100-character limit; match the environment server.
 export const RELAY_HTTP_ROUTER_CONFIG = {
@@ -137,7 +138,15 @@ const appendRelayTraceContextResponseHeader = Effect.gen(function* () {
 
 const relayCorsMiddleware = HttpMiddleware.cors({
   allowedMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["authorization", "b3", "traceparent", "content-type", "dpop"],
+  allowedHeaders: [
+    "authorization",
+    "b3",
+    "traceparent",
+    "content-type",
+    "dpop",
+    SAAS_CHAT_DEVICE_HEADER,
+    SAAS_CHAT_FILE_NAME_HEADER,
+  ],
   exposedHeaders: ["traceparent", "www-authenticate"],
   maxAge: 86_400,
 });
