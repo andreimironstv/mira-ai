@@ -102,16 +102,17 @@ export function ThreadListToolbar(props: {
   return (
     <View
       onLayout={props.onLayout}
-      className={props.sidebar ? "absolute inset-x-0 top-0 z-[4] bg-header px-2" : "bg-header px-2"}
+      className={props.sidebar ? "absolute inset-x-0 top-0 z-[4] bg-screen px-4" : "px-4"}
       style={{ paddingTop, paddingBottom }}
     >
       <WorkspaceListToolbarRow
+        title="Agent"
         searching={searching}
         searchField={searchField}
         onCloseSearch={closeSearch}
         onOpenSearch={openSearch}
         searchAccessibilityLabel="Caută conversații"
-        titleAccessibilityLabel="Mira, Conversații"
+        titleAccessibilityLabel="Agent"
         onOpenEnvironments={props.onOpenEnvironments}
         filter={filterButton}
       />
