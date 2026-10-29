@@ -38,7 +38,7 @@ describe("environmentsToAutoConnect", () => {
       ]),
       savedEnvironmentIds: new Set(["saved"]),
       localEnvironmentId: "this-mac",
-      previouslyAdded: new Set(["removed"]),
+      dismissed: new Set(["removed"]),
     });
     expect(result.map((environment) => environment.environmentId)).toEqual([
       "offline-pc",

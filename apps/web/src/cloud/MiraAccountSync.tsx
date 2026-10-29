@@ -29,11 +29,7 @@ import {
   MIRA_PI_INSTANCE_ID,
   miraPiInstance,
 } from "./miraAccount";
-import {
-  isComputerSharingOff,
-  readAutoAddedComputers,
-  rememberAutoAddedComputer,
-} from "./miraSharing";
+import { isComputerSharingOff, readDismissedComputers } from "./miraSharing";
 import { miraAccess, miraChatHistory, miraChatRemote } from "./miraChat";
 import { fetchMiraAccount } from "./miraAccount";
 import { resolveClerkSignInProps } from "../components/clerk/authRedirect";
@@ -186,12 +182,12 @@ export function MiraAccountSync() {
     });
   });
 
-  const addAccountComputers = useEffectEvent((account: string) => {
+  const addAccountComputers = useEffectEvent(() => {
     const pending = environmentsToAutoConnect({
       discovered: discovery.environments,
       savedEnvironmentIds: new Set(environmentIds),
       localEnvironmentId: primaryEnvironmentId,
-      previouslyAdded: readAutoAddedComputers(account),
+      dismissed: readDismissedComputers(),
     });
     for (const environment of pending) {
       const id = environment.environmentId;
@@ -201,11 +197,7 @@ export function MiraAccountSync() {
         new RelayConnectionRegistration({
           target: new RelayConnectionTarget({ environmentId: id, label: environment.label }),
         }),
-      ).then((result) => {
-        registering.current.delete(id);
-        // Only a computer that actually got added counts; a failed attempt retries later.
-        if (result._tag === "Success") rememberAutoAddedComputer(account, id);
-      });
+      ).then(() => registering.current.delete(id));
     }
   });
 
@@ -213,7 +205,7 @@ export function MiraAccountSync() {
     if (accountId === null) return;
     shareThisComputer(accountId);
     connectModel(accountId);
-    addAccountComputers(accountId);
+    addAccountComputers();
   });
 
   return null;

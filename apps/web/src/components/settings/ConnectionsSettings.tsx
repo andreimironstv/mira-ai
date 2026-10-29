@@ -1,4 +1,5 @@
 import { SessionPermissions } from "./SessionPermissions";
+import { setComputerDismissed } from "../../cloud/miraSharing";
 import { ChevronRightIcon, EllipsisIcon } from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
 import { useState } from "react";
@@ -588,6 +589,7 @@ export function ConnectionsSettings() {
     setSavedBackendError(null);
     const result = await removeEnvironment(environmentId);
     setRemovingSavedEnvironmentId(null);
+    if (result._tag === "Success") setComputerDismissed(environmentId, true);
     if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
       const message = error instanceof Error ? error.message : "Serverul nu a putut fi eliminat.";
