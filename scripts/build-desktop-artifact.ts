@@ -3816,7 +3816,8 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
       ? path.join(stageAppDir, WINDOWS_SERVER_RESOURCE_SOURCE_DIR, WINDOWS_SERVER_ASAR_RESOURCE)
       : undefined;
   const stagePackageJson: StagePackageJson = {
-    name: "t3code",
+    // Windows installs into Programs\<name>; "t3code" would overwrite an installed T3 Code.
+    name: "mira",
     version: appVersion,
     buildVersion: appVersion,
     t3codeCommitHash: commitHash,

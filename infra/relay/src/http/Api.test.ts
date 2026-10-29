@@ -1483,6 +1483,29 @@ describe("relay CORS", () => {
       }
     }).pipe(Effect.scoped),
   );
+
+  it.effect("lets browser chat clients send the Mira device and file name headers", () =>
+    Effect.gen(function* () {
+      const httpEffect = yield* HttpRouter.toHttpEffect(
+        Layer.mergeAll(RelayHttpApi.layerNotFoundRoute, RelayHttpApi.layerCors),
+      );
+      const response = yield* sendRelayRequest(
+        httpEffect,
+        new Request("https://relay.test/v1/chat/completions", {
+          method: "OPTIONS",
+          headers: {
+            origin: "t3code://app",
+            "access-control-request-method": "POST",
+            "access-control-request-headers": "x-mira-device-id,x-mira-file-name",
+          },
+        }),
+      );
+
+      const allowed = response.headers["access-control-allow-headers"]?.split(",") ?? [];
+      expect(allowed).toContain("x-mira-device-id");
+      expect(allowed).toContain("x-mira-file-name");
+    }).pipe(Effect.scoped),
+  );
 });
 
 // Use the Workers request path so pre-response handlers apply.
