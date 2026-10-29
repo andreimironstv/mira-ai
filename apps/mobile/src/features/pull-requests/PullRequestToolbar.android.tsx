@@ -55,8 +55,9 @@ export function PullRequestToolbar(props: { readonly onRequestVisibility?: () =>
   }, [searching, closeSearch, listFocused, navigation, isTabActive]);
   const { paddingTop, paddingBottom } = useToolbarLayout();
   return (
-    <View className="bg-header px-2" style={{ paddingTop, paddingBottom }}>
+    <View className="px-4" style={{ paddingTop, paddingBottom }}>
       <WorkspaceListToolbarRow
+        title="Pull request-uri"
         searching={searching}
         searchField={
           <SearchField

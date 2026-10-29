@@ -1,17 +1,16 @@
 import type { ReactNode } from "react";
 import { View } from "react-native";
 import { AndroidHeaderIconButton } from "../../components/ui/AndroidScreenHeader";
-import { CompactBrandTitle } from "../../components/CompactBrandTitle";
-import { useToolbarLayout } from "../../components/ui/useToolbarLayout";
+import { AppText as Text } from "../../components/ui/AppText";
 import { WorkspaceConnectionTitle } from "../home/WorkspaceConnectionTitle";
 
 /**
- * The Android header row above each workspace tab's list. Both tabs draw this same row, so
- * switching tabs leaves the title and buttons where they were. It is plain React Native rather
- * than the Compose app bar: a hidden tab lays out at zero size, and Compose-hosted content takes
- * several frames to measure again when the tab comes back.
+ * Android's header over each workspace tab's list. Plain React Native, not the Compose app bar:
+ * a hidden tab lays out at zero size, and Compose-hosted content takes several frames to measure
+ * again when the tab comes back.
  */
 export function WorkspaceListToolbarRow(props: {
+  readonly title: string;
   readonly searching: boolean;
   readonly searchField: ReactNode;
   readonly onCloseSearch: () => void;
@@ -22,42 +21,46 @@ export function WorkspaceListToolbarRow(props: {
   /** Stays trailing while searching, so it never moves and still narrows the results. */
   readonly filter: ReactNode;
 }) {
-  const { height } = useToolbarLayout();
+  if (props.searching) {
+    return (
+      <View className="min-h-[52px] flex-row items-center gap-2.5">
+        <AndroidHeaderIconButton
+          accessibilityLabel="Închide căutarea"
+          icon="chevron.left"
+          onPress={props.onCloseSearch}
+        />
+        {props.searchField}
+        {props.filter}
+      </View>
+    );
+  }
   return (
-    <View className="flex-row items-center gap-1" style={{ minHeight: height }}>
-      {props.searching ? (
-        <>
-          <AndroidHeaderIconButton
-            accessibilityLabel="Închide căutarea"
-            icon="arrow.left"
-            onPress={props.onCloseSearch}
-          />
-          {props.searchField}
-          {props.filter}
-        </>
-      ) : (
-        <>
-          <View className="min-w-0 flex-1 pl-4">
-            <WorkspaceConnectionTitle
-              grow
-              onPress={props.onOpenEnvironments}
-              brand={
-                <CompactBrandTitle
-                  allowFontScaling={false}
-                  accessibilityLabel={props.titleAccessibilityLabel}
-                  fit
-                />
-              }
-            />
-          </View>
-          <AndroidHeaderIconButton
-            accessibilityLabel={props.searchAccessibilityLabel}
-            icon="magnifyingglass"
-            onPress={props.onOpenSearch}
-          />
-          {props.filter}
-        </>
-      )}
+    <View>
+      <View className="min-h-[52px] flex-row items-center justify-end gap-2.5">
+        <AndroidHeaderIconButton
+          accessibilityLabel={props.searchAccessibilityLabel}
+          icon="magnifyingglass"
+          onPress={props.onOpenSearch}
+        />
+        {props.filter}
+      </View>
+      <View className="flex-row pt-1">
+        {/* A dropped connection shows here in place of the title, as before. */}
+        <WorkspaceConnectionTitle
+          grow
+          onPress={props.onOpenEnvironments}
+          brand={
+            <Text
+              accessibilityRole="header"
+              accessibilityLabel={props.titleAccessibilityLabel}
+              className="font-t3-bold text-[34px] leading-[41px] text-foreground"
+              numberOfLines={1}
+            >
+              {props.title}
+            </Text>
+          }
+        />
+      </View>
     </View>
   );
 }

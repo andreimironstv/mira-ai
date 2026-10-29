@@ -53,7 +53,7 @@ export function ThreadScreenHost({ children }: { readonly children: ReactNode })
   return (
     <ThreadScreenContext.Provider value={store}>
       {children}
-      <View className="flex-1 bg-screen android:overflow-hidden android:rounded-t-[28px] android:bg-thread-canvas">
+      <View className="flex-1 bg-screen android:bg-thread-canvas">
         <ThreadScreenOutlet />
       </View>
     </ThreadScreenContext.Provider>

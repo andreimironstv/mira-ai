@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Platform, View } from "react-native";
 
+/** Android's page body: flat on the screen under its header, as on iOS, with no raised sheet. */
 export function ScreenContent({
   children,
   insetHorizontal = false,
@@ -13,18 +14,11 @@ export function ScreenContent({
   if (Platform.OS !== "android") return children;
 
   return (
-    <View className={fitToContents ? "shrink bg-header" : "flex-1 bg-header"}>
-      <View
-        className="overflow-hidden rounded-t-[28px] bg-sheet-solid"
-        style={{
-          flexShrink: 1,
-          flexGrow: fitToContents ? 0 : 1,
-          flexBasis: fitToContents ? "auto" : 0,
-          marginHorizontal: insetHorizontal ? 4 : 0,
-        }}
-      >
-        {children}
-      </View>
+    <View
+      className={fitToContents ? "shrink bg-screen" : "flex-1 bg-screen"}
+      style={{ marginHorizontal: insetHorizontal ? 4 : 0 }}
+    >
+      {children}
     </View>
   );
 }

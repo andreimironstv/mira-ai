@@ -11,9 +11,9 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useResolveClassNames } from "uniwind";
 
+import { AndroidScreenHeader } from "../../components/ui/AndroidScreenHeader";
 import { SymbolView } from "../../components/ui/AppSymbol";
 import { AppText as Text } from "../../components/ui/AppText";
 import * as Dialog from "../../components/ui/Dialog";
@@ -25,7 +25,6 @@ import { NativeStackScreenOptions } from "../../native/StackHeader";
 import { useHardwareKeyboardCommand } from "../keyboard/hardwareKeyboardCommands";
 import { ThreadSwipeable } from "../home/thread-swipe-actions";
 import { useWorkspaceTabs } from "../workspace/WorkspaceTabsContext";
-import { ChatRoundButton } from "./ChatRoundButton";
 import { miraChatHistory, useMiraChatHistory } from "./miraChat";
 
 const confirmDelete = (chat: SaasChatConversation) =>
@@ -139,7 +138,6 @@ function useChatSearch() {
 /** The Chat tab: every chat on the account, newest first. */
 export function ChatHome() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const { chats, loaded, unread, streaming } = useMiraChatHistory();
   const { query, setQuery } = useChatSearch();
   const [androidSearching, setAndroidSearching] = useState(false);
@@ -158,26 +156,22 @@ export function ChatHome() {
   return (
     <View className="flex-1 bg-screen">
       {Platform.OS === "android" ? (
-        // iOS draws this header natively; Android matches it: large title, round search button.
-        // New chat sits in the circle beside the floating tabs.
-        <View style={{ paddingTop: insets.top }}>
+        // New chat sits in the circle beside Android's floating tabs.
+        <View>
           <NativeStackScreenOptions options={{ headerShown: false }} />
-          <View className="h-[52px] flex-row items-center justify-end gap-2.5 px-4">
-            <ChatRoundButton
-              accessibilityLabel={androidSearching ? "Închide căutarea" : "Caută în chat-uri"}
-              icon={androidSearching ? "xmark" : "magnifyingglass"}
-              onPress={() => {
-                if (androidSearching) setQuery("");
-                setAndroidSearching(!androidSearching);
-              }}
-            />
-          </View>
-          <Text
-            accessibilityRole="header"
-            className="px-5 pb-2 font-t3-bold text-[34px] leading-[41px] text-foreground"
-          >
-            Chat
-          </Text>
+          <AndroidScreenHeader
+            title="Chat"
+            actions={[
+              {
+                accessibilityLabel: androidSearching ? "Închide căutarea" : "Caută în chat-uri",
+                icon: androidSearching ? "xmark" : "magnifyingglass",
+                onPress: () => {
+                  if (androidSearching) setQuery("");
+                  setAndroidSearching(!androidSearching);
+                },
+              },
+            ]}
+          />
           {androidSearching ? (
             <View className="px-4 pb-2">
               <SearchField

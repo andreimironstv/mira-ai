@@ -1,6 +1,6 @@
 import { MOBILE_SHAPE } from "../../lib/designTokens";
-import type { ReactNode } from "react";
-import { Platform, View } from "react-native";
+import { Children, Fragment, isValidElement, type ReactNode } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 
 import { AppText as Text } from "./AppText";
 
@@ -37,7 +37,15 @@ export function ListSection(props: {
             Platform.OS === "android" ? MOBILE_SHAPE.group.android : MOBILE_SHAPE.group.ios,
         }}
       >
-        {props.children}
+        {/* Hairlines between rows, inset from the leading edge, as in iOS's grouped lists. */}
+        {Children.toArray(props.children).map((child, index) => (
+          <Fragment key={isValidElement(child) && child.key !== null ? child.key : index}>
+            {index > 0 ? (
+              <View className="ml-4 bg-border" style={{ height: StyleSheet.hairlineWidth }} />
+            ) : null}
+            {child}
+          </Fragment>
+        ))}
       </View>
       {props.footer ? (
         <Text textRole="footnote" className="px-4 text-foreground-muted">

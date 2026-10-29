@@ -12,6 +12,7 @@ import { NativeStackScreenOptions } from "../../native/StackHeader";
 import { AndroidWorkspaceSidebarButton } from "../../features/layout/workspace-sidebar-toolbar";
 import { useAppearancePreferences } from "../../features/settings/appearance/AppearancePreferencesProvider";
 import { AndroidScreenHeader } from "./AndroidScreenHeader";
+import { RoundIconButton } from "./RoundIconButton";
 import { ScreenHeaderButton } from "./ScreenHeaderButton.android";
 import { SymbolView } from "./AppSymbol";
 import { Menu } from "./Menu";
@@ -23,7 +24,7 @@ import { useAndroidControlSizing } from "./useAndroidControlSizing";
 export function AppBar(props: AppBarProps) {
   const { search } = props;
   const { paddingTop, paddingBottom } = useToolbarLayout();
-  const { scale, buttonSize, iconSize, smallIconSize } = useAndroidControlSizing();
+  const { scale, buttonSize, smallIconSize } = useAndroidControlSizing();
   const { themeVariables } = useAppearancePreferences();
   const inputRef = useRef<TextInputInstance>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -89,31 +90,14 @@ export function AppBar(props: AppBarProps) {
     return (
       <>
         {options}
-        <View
-          className="border-b border-header-border bg-header px-3"
-          style={{
-            paddingTop,
-            paddingBottom: 8.75 * scale,
-            borderBottomWidth: 0,
-          }}
-        >
+        <View className="px-4" style={{ paddingTop, paddingBottom: 8.75 * scale }}>
           <View className="flex-row items-center gap-2" style={{ minHeight: buttonSize }}>
             {props.onBack ? (
-              <Pressable
+              <RoundIconButton
                 accessibilityLabel="Înapoi"
-                accessibilityRole="button"
-                hitSlop={8}
+                icon="chevron.left"
                 onPress={props.onBack}
-                className="items-center justify-center"
-                style={{ width: buttonSize, height: buttonSize }}
-              >
-                <SymbolView
-                  name="chevron.left"
-                  size={iconSize}
-                  tintColorClassName="accent-header-foreground"
-                  type="monochrome"
-                />
-              </Pressable>
+              />
             ) : null}
             <View
               className="flex-1 flex-row items-center bg-input"
@@ -205,7 +189,7 @@ export function AppBar(props: AppBarProps) {
           </View>
           {searching ? (
             <View
-              className="absolute inset-0 bg-header"
+              className="absolute inset-0 bg-screen"
               // Match Material TopAppBar's navigation inset so the back button stays put.
               style={{ paddingTop, paddingBottom, paddingHorizontal: 4 }}
             >
