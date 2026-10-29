@@ -61,6 +61,7 @@ import * as RelayDb from "../db.ts";
 import * as EnvironmentCredentials from "../environments/EnvironmentCredentials.ts";
 import * as HeldHooks from "../hooks/HeldHooks.ts";
 import * as HookInbox from "../hooks/HookInbox.ts";
+import { AccountEvents } from "../account/AccountEvents.ts";
 import * as EnvironmentLinks from "../environments/EnvironmentLinks.ts";
 import * as ManagedEndpointAllocations from "../environments/ManagedEndpointAllocations.ts";
 import * as ManagedEndpointProvider from "../environments/ManagedEndpointProvider.ts";
@@ -1066,6 +1067,65 @@ describe("relay managed tunnel recovery", () => {
 });
 
 describe("relay environment unlink", () => {
+  it.effect("tells the account's open clients when a computer leaves it", () => {
+    const notified: Array<string> = [];
+    const layerServices = Layer.mergeAll(
+      layerRelayUnlinkTest({
+        getForUser: () => Effect.succeed(linkedEnvironmentRecord),
+        revokeForUser: () => Effect.succeed(true),
+      }),
+      Layer.succeed(AccountEvents, {
+        environmentsChanged: (userId) => Effect.sync(() => notified.push(userId)),
+      }),
+    );
+    const layerHandlers = RelayHttpApi.layerClientApi.pipe(
+      HttpRouter.provideRequest(layerServices),
+      Layer.provide(
+        Layer.mergeAll(
+          layerServices,
+          Layer.succeed(RelayConfiguration.RelayConfiguration, relaySettings),
+          NodeCryptoLayer.layer,
+          Layer.mock(RelayTokens.RelayTokens, { resolveDpopAccessTokenScopes: () => null }),
+          Layer.mock(EnvironmentLinker.EnvironmentLinker, {}),
+          Layer.mock(Devices.Devices, {}),
+        ),
+      ),
+      Layer.provideMerge(
+        Layer.succeed(RelayClientAuth, {
+          clientBearer: (effect) =>
+            Effect.provideService(effect, RelayClientPrincipal, {
+              userId: "user-1",
+              token: "test-token",
+            }),
+        }),
+      ),
+    );
+    return Effect.gen(function* () {
+      const app = yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          HttpRouter.toWebHandler(
+            HttpApiBuilder.layer(HttpApi.make("RelayApi").add(RelayApi.groups.client)).pipe(
+              Layer.provide(layerHandlers),
+              Layer.provide(HttpServer.layerServices),
+            ),
+            { disableLogger: true },
+          ),
+        ),
+        (app) => Effect.promise(() => app.dispose()),
+      );
+      const response = yield* Effect.promise(() =>
+        app.handler(
+          new Request("https://relay.example.test/v1/client/environment-links/environment-1", {
+            method: "DELETE",
+            headers: { authorization: "Bearer test-token" },
+          }),
+        ),
+      );
+      expect(response.status).toBe(200);
+      expect(notified).toEqual(["user-1"]);
+    }).pipe(Effect.scoped);
+  });
+
   it.effect("drops the unlinked endpoint's held webhooks, even if clearing fails", () => {
     const cleared: Array<string> = [];
     const endpointKey = "0123456789abcdef";

@@ -4,7 +4,12 @@ import {
   RelayConnectionRegistration,
   RelayConnectionTarget,
 } from "@t3tools/client-runtime/connection";
-import { environmentsToAutoConnect, managedRelaySessionAtom } from "@t3tools/client-runtime/relay";
+import {
+  environmentsToAutoConnect,
+  managedRelaySessionAtom,
+  watchAccountEvents,
+} from "@t3tools/client-runtime/relay";
+import * as Effect from "effect/Effect";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { AppState } from "react-native";
@@ -14,6 +19,7 @@ import { relayEnvironmentDiscovery } from "../../state/relay";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { fetchMiraAccount, miraAccess, miraChatHistory, miraChatRemote } from "../chat/miraChat";
 import { useWorkspaceEnvironments } from "../../state/workspace";
+import { resolveCloudPublicConfig } from "./publicConfig";
 
 // SecureStore keys allow only letters, digits, ".", "-", and "_".
 // An admin's change to the plan or limits shows up within this long.
@@ -113,6 +119,16 @@ export function MiraAccountSync() {
       subscription.remove();
     };
   }, [accountId, refreshDiscovery]);
+
+  useEffect(() => {
+    const relayUrl = resolveCloudPublicConfig().relay.url;
+    if (!relayReady || relaySession === null || !relayUrl) return;
+    return watchAccountEvents({
+      relayUrl,
+      readToken: () => Effect.runPromise(relaySession.readClerkToken()),
+      onEnvironmentsChanged: () => void refreshDiscovery(),
+    });
+  }, [relayReady, relaySession, refreshDiscovery]);
 
   const addAccountComputers = useEffectEvent(() => {
     if (accountId === null || loadedFor !== accountId) return;

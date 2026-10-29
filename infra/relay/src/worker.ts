@@ -70,6 +70,8 @@ import * as HookForwarder from "./hooks/HookForwarder.ts";
 import * as HeldHooks from "./hooks/HeldHooks.ts";
 import * as HookInbox from "./hooks/HookInbox.ts";
 import * as HookInboxObject from "./hooks/HookInboxObject.ts";
+import { AccountEvents } from "./account/AccountEvents.ts";
+import * as AccountEventsObject from "./account/AccountEventsObject.ts";
 import * as AdminPanel from "./saas/adminPanel.ts";
 import * as LlmProxy from "./saas/LlmProxy.ts";
 import * as SaasAccounts from "./saas/SaasAccounts.ts";
@@ -236,6 +238,7 @@ export const layer = Api.make(
       },
     });
     const hookInboxes = yield* HookInboxObject.HookInboxObject;
+    const accountEventObjects = yield* AccountEventsObject.AccountEventsObject;
 
     const alchemyRuntimeContext: Alchemy.BaseRuntimeContext = yield* Cloudflare.Worker;
 
@@ -280,6 +283,19 @@ export const layer = Api.make(
         hookInboxes.getByName(endpointKey).wake(baseUrl).pipe(inboxCall("wake", endpointKey)),
       clear: ({ endpointKey }) =>
         hookInboxes.getByName(endpointKey).clear().pipe(inboxCall("clear", endpointKey)),
+    });
+
+    const layerAccountEvents = Layer.succeed(AccountEvents, {
+      environmentsChanged: (userId) =>
+        accountEventObjects
+          .getByName(userId)
+          .environmentsChanged()
+          .pipe(
+            Effect.provideService(Alchemy.RuntimeContext, alchemyRuntimeContext),
+            Effect.catchCause((cause) =>
+              Effect.logWarning("Could not notify account clients", { cause }),
+            ),
+          ),
     });
 
     const inRuntime = <A, E>(effect: Effect.Effect<A, E, Alchemy.RuntimeContext>) =>
@@ -378,7 +394,9 @@ export const layer = Api.make(
       Layer.provideMerge(
         ApnsDeliveryQueue.layerCloudflareQueues(apnsDeliveryQueueSender, alchemyRuntimeContext),
       ),
-      Layer.provideMerge(Layer.mergeAll(AgentActivityRows.layer, Devices.layer, layerHookInbox)),
+      Layer.provideMerge(
+        Layer.mergeAll(AgentActivityRows.layer, Devices.layer, layerHookInbox, layerAccountEvents),
+      ),
       Layer.provideMerge(EnvironmentCredentials.layer),
       Layer.provideMerge(
         Layer.mergeAll(
@@ -541,6 +559,9 @@ export const layer = Api.make(
         ),
         HttpApiScalar.layer(RelayApi, { path: "/docs" }),
         RelayHttpApi.layerDocsRedirectRoute,
+        RelayHttpApi.layerAccountEventsRoute((userId, request) =>
+          accountEventObjects.getByName(userId).fetch(request),
+        ).pipe(Layer.provide(layerRuntime)),
       ).pipe(
         Layer.provide([Etag.layerWeak, layerHttpPlatformNotSupported, RelayHttpApi.layerCors]),
       ),
@@ -569,6 +590,7 @@ export const layer = Api.make(
         Layer.provideMerge(Cloudflare.DNS.ReadWriteDnsHttp),
         Layer.provideMerge(Cloudflare.Workers.RateLimitBinding),
         Layer.provideMerge(HookInboxObject.layer),
+        Layer.provideMerge(AccountEventsObject.layer),
         // Disable the duplicate runtime span; ours applies route/header/token redaction and rejects sender traceparent.
         Layer.provideMerge(
           Alchemy.Telemetry.layer(Layer.succeed(HttpMiddleware.TracerDisabledWhen)(() => true)),

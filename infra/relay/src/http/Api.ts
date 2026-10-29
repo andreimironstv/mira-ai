@@ -82,6 +82,11 @@ import * as MobileRegistrations from "../agentActivity/MobileRegistrations.ts";
 import { withSpanAttributes } from "../observability.ts";
 import { isRelayHookPath, redactRelayHookUrl } from "../hooks/HookForwarder.ts";
 import * as RelayDb from "../db.ts";
+import {
+  ACCOUNT_EVENTS_PATH,
+  AccountEvents,
+  isAccountEventsPath,
+} from "../account/AccountEvents.ts";
 import { SAAS_CHAT_DEVICE_HEADER, SAAS_CHAT_FILE_NAME_HEADER } from "@t3tools/contracts/saas";
 
 // Delegated IDs exceed the router's default 100-character limit; match the environment server.
@@ -180,6 +185,42 @@ export const layerDocsRedirectRoute = HttpRouter.add(
   HttpServerResponse.redirect("/docs"),
 );
 
+/** Verifies the bearer in `?token=` (sockets cannot send headers from browsers) and hands off. */
+export const layerAccountEventsRoute = <E>(
+  connect: (
+    userId: string,
+    request: HttpServerRequest.HttpServerRequest,
+  ) => Effect.Effect<HttpServerResponse.HttpServerResponse, E>,
+) =>
+  Layer.unwrap(
+    Effect.gen(function* () {
+      const config = yield* RelayConfiguration.RelayConfiguration;
+      return HttpRouter.add("GET", ACCOUNT_EVENTS_PATH, accountEventsHandler(config, connect));
+    }),
+  );
+
+const accountEventsHandler = <E>(
+  config: RelayConfiguration.RelayConfiguration["Service"],
+  connect: (
+    userId: string,
+    request: HttpServerRequest.HttpServerRequest,
+  ) => Effect.Effect<HttpServerResponse.HttpServerResponse, E>,
+) =>
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    if (request.headers.upgrade?.toLowerCase() !== "websocket") {
+      return HttpServerResponse.empty({ status: 426 });
+    }
+    const token = new URL(request.url, "http://relay").searchParams.get("token") ?? "";
+    const verified = yield* verifyRelayClientBearerToken(config, token).pipe(Effect.option);
+    if (Option.isNone(verified) || !verified.value.sub) {
+      return HttpServerResponse.empty({ status: 401 });
+    }
+    return yield* connect(verified.value.sub, request).pipe(
+      Effect.orElseSucceed(() => HttpServerResponse.empty({ status: 503 })),
+    );
+  });
+
 // Finish before the mobile client's 10 s timeout so request cancellation cannot discard unexported spans.
 export const RELAY_REQUEST_DEADLINE_MS = 9_000;
 /** Allow body reading, upstream wait, and inbox hold; an API-sized deadline would drop held webhooks. */
@@ -244,6 +285,8 @@ export const traceRelayHttpRequest = Effect.fnUntraced(function* <E, R>(
   >,
 ) {
   const request = yield* HttpServerRequest.HttpServerRequest;
+  // Its URL carries the client's bearer, and a socket outlives the request deadline.
+  if (isAccountEventsPath(request.url)) return yield* httpEffect;
   const traced = annotateRelayEdgeLocation.pipe(
     Effect.andThen(appendRelayTraceContextResponseHeader),
     Effect.andThen(relayRequestDeadline(httpEffect)),
@@ -887,6 +930,7 @@ export const layerClientApi = HttpApiBuilder.group(
             yield* appendRelayCredentialResponseHeaders;
             const { userId } = yield* RelayClientPrincipal;
             const result = yield* linker.link({ userId, request: payload });
+            yield* (yield* AccountEvents).environmentsChanged(userId);
             return {
               ok: true,
               cloudUserId: userId,
@@ -996,6 +1040,7 @@ export const layerClientApi = HttpApiBuilder.group(
                 relayInternalErrorResponse("upstream_unavailable"),
             }),
           );
+          if (unlinked) yield* (yield* AccountEvents).environmentsChanged(userId);
           return { ok: unlinked };
         }, mapRelayCommonApiErrors("not_authorized")),
       )
