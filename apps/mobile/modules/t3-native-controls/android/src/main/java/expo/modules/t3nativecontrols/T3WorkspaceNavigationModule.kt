@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -55,7 +56,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
@@ -106,10 +106,10 @@ class T3WorkspaceNavigationModule : Module() {
       Prop("actionContentColor") { view: T3WorkspaceNavigationView, value: Int ->
         view.actionContentColor = value
       }
-      Prop("searchVisible") { view: T3WorkspaceNavigationView, value: Boolean ->
-        view.searchVisible = value
+      Prop("composeVisible") { view: T3WorkspaceNavigationView, value: Boolean ->
+        view.composeVisible = value
       }
-      Events("onTabSelected", "onNewThread", "onOverlayChange", "onSearch")
+      Events("onTabSelected", "onNewThread", "onOverlayChange")
     }
   }
 }
@@ -125,7 +125,6 @@ class T3WorkspaceNavigationView(
   private val onTabSelected by EventDispatcher()
   private val onNewThread by EventDispatcher()
   private val onOverlayChange by EventDispatcher()
-  private val onSearch by EventDispatcher()
   var tabs by mutableStateOf(listOf("chats", "threads", "settings"))
   var selectedTab by mutableStateOf("threads")
   var rail by mutableStateOf(false)
@@ -141,7 +140,7 @@ class T3WorkspaceNavigationView(
   var unselectedColor by mutableStateOf(0)
   var actionColor by mutableStateOf(0)
   var actionContentColor by mutableStateOf(0)
-  var searchVisible by mutableStateOf(false)
+  var composeVisible by mutableStateOf(false)
 
   override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
     // Fabric measures the replacement bar before attaching it on a fold.
@@ -186,8 +185,8 @@ class T3WorkspaceNavigationView(
   }
 
   /**
-   * As on iOS: the tabs in a capsule floating over the screen, the selected one in the accent
-   * with its filled icon, and search in its own circle beside them.
+   * As on iOS: icon-only tabs in a capsule floating over the screen, the selected one filled in
+   * the accent, and New chat in its own circle beside them, within the thumb's reach.
    */
   @Composable
   private fun floatingBar() {
@@ -205,20 +204,21 @@ class T3WorkspaceNavigationView(
       ) {
         tabs.forEach { tab -> barItem(tab) }
       }
-      if (searchVisible) {
+      if (composeVisible) {
         Box(
           Modifier
             .fillMaxHeight()
             .aspectRatio(1f)
             .floatingSurface()
-            .clickable(role = Role.Button) { onSearch(emptyMap<String, Any>()) }
-            .semantics { contentDescription = "Caută" },
+            .clickable(role = Role.Button) { onNewThread(emptyMap<String, Any>()) }
+            .semantics { contentDescription = "Chat nou" },
           contentAlignment = Alignment.Center,
         ) {
           Icon(
-            painterResource(R.drawable.t3_search),
+            painterResource(R.drawable.t3_new_thread),
             contentDescription = null,
-            tint = Color(unselectedColor),
+            tint = Color(selectedColor),
+            modifier = Modifier.size(BAR_ICON_SIZE),
           )
         }
       }
@@ -243,7 +243,7 @@ class T3WorkspaceNavigationView(
     val selected = selectedTab == tab
     val title = tabTitle(tab)
     val tint = Color(if (selected) selectedColor else unselectedColor)
-    Column(
+    Box(
       Modifier
         .weight(1f)
         .fillMaxHeight()
@@ -255,18 +255,13 @@ class T3WorkspaceNavigationView(
           onClick = { onTabSelected(mapOf("tab" to tab)) },
         )
         .semantics { contentDescription = title },
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center,
+      contentAlignment = Alignment.Center,
     ) {
-      Icon(tabIconPainter(tab, selected), contentDescription = null, tint = tint)
-      Text(
-        title,
-        Modifier.padding(top = 2.dp).clearAndSetSemantics {},
-        color = tint,
-        fontSize = (10.5f * textScale).sp,
-        fontWeight = FontWeight.SemiBold,
-        maxLines = 1,
-        softWrap = false,
+      Icon(
+        tabIconPainter(tab, selected),
+        contentDescription = null,
+        tint = tint,
+        modifier = Modifier.size(BAR_ICON_SIZE),
       )
     }
   }
@@ -458,6 +453,7 @@ class T3WorkspaceNavigationView(
     val ICON_SIZE = 24.dp
     val RAIL_SHADOW = 6.dp
     val BAR_SHADOW = 5.dp
+    val BAR_ICON_SIZE = 26.dp
     val RAIL_EXPANDED_SHAPE = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
     const val DISABLED_ALPHA = 0.4f
 

@@ -144,7 +144,7 @@ export function ChatHome() {
   const { query, setQuery } = useChatSearch();
   const [androidSearching, setAndroidSearching] = useState(false);
   const searchInput = useRef<TextInputInstance>(null);
-  // The search circle beside Android's floating tabs sends this to the tab on screen.
+  // A hardware keyboard's search shortcut opens Android's search field.
   useHardwareKeyboardCommand("focusSearch", () => {
     if (Platform.OS !== "android") return false;
     setAndroidSearching(true);
@@ -158,25 +158,18 @@ export function ChatHome() {
   return (
     <View className="flex-1 bg-screen">
       {Platform.OS === "android" ? (
-        // iOS draws this header natively; Android matches it: large title, round buttons.
+        // iOS draws this header natively; Android matches it: large title, round search button.
+        // New chat sits in the circle beside the floating tabs.
         <View style={{ paddingTop: insets.top }}>
           <NativeStackScreenOptions options={{ headerShown: false }} />
           <View className="h-[52px] flex-row items-center justify-end gap-2.5 px-4">
-            {androidSearching ? (
-              <ChatRoundButton
-                accessibilityLabel="Închide căutarea"
-                icon="xmark"
-                onPress={() => {
-                  setQuery("");
-                  setAndroidSearching(false);
-                }}
-              />
-            ) : null}
             <ChatRoundButton
-              accessibilityLabel="Chat nou"
-              icon="square.and.pencil"
-              accent
-              onPress={newChat}
+              accessibilityLabel={androidSearching ? "Închide căutarea" : "Caută în chat-uri"}
+              icon={androidSearching ? "xmark" : "magnifyingglass"}
+              onPress={() => {
+                if (androidSearching) setQuery("");
+                setAndroidSearching(!androidSearching);
+              }}
             />
           </View>
           <Text
