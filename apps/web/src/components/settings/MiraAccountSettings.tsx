@@ -67,6 +67,8 @@ export function MiraAccountSettings() {
   }
 
   const used = account ? account.usage.inputTokens + account.usage.outputTokens : 0;
+  // Admins can grant Pro without Stripe, so the plan's features decide, not its price.
+  const hasPro = account?.plan.agenticEnabled === true;
   const isPaid = account !== null && account.plan.priceCents > 0;
   return (
     <SettingsSection title="Mira account" icon={<CloudIcon aria-hidden className="size-4" />}>
@@ -74,15 +76,17 @@ export function MiraAccountSettings() {
         title={account ? `Planul ${account.plan.name}` : "Se încarcă planul…"}
         description={account?.email ?? undefined}
         control={
-          isPaid ? (
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={busy}
-              onClick={() => run("Facturarea nu a putut fi deschisă", openMiraBillingPortal)}
-            >
-              Gestionează facturarea
-            </Button>
+          hasPro ? (
+            isPaid ? (
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={busy}
+                onClick={() => run("Facturarea nu a putut fi deschisă", openMiraBillingPortal)}
+              >
+                Gestionează facturarea
+              </Button>
+            ) : null
           ) : (
             <Button
               size="xs"
