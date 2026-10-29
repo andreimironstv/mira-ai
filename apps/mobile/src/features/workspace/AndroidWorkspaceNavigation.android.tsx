@@ -76,7 +76,7 @@ export function AndroidWorkspaceNavigation(props: {
   const { themeAppearance, themeVariables: colors } = useAppearancePreferences();
   const { scale } = useAndroidControlSizing();
   const rail = Boolean(props.rail);
-  const { containerColor, indicatorColor, selectedColor, unselectedColor } =
+  const { pageColor, containerColor, indicatorColor, selectedColor, unselectedColor } =
     androidWorkspaceNavigationColors(colors, rail);
   const selectedTab = selectedNavigationTab(
     order,
@@ -92,7 +92,7 @@ export function AndroidWorkspaceNavigation(props: {
       style={
         // The rail draws its own surface and pads the system bars; while open it spans the
         // workspace, so the rest of it must stay transparent.
-        rail ? { flex: 1 } : { backgroundColor: containerColor, paddingBottom: insets.bottom }
+        rail ? { flex: 1 } : { backgroundColor: pageColor, paddingBottom: insets.bottom }
       }
     >
       <NativeNavigation

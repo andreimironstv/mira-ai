@@ -16,15 +16,7 @@ import type {
 import { Image } from "expo-image";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
-import {
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  type ScrollViewInstance,
-  Share,
-  View,
-} from "react-native";
+import { Linking, Pressable, ScrollView, type ScrollViewInstance, Share, View } from "react-native";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import Animated, {
   FadeIn,
@@ -739,7 +731,7 @@ function ChatComposer({
 
   return (
     <View
-      className={Platform.OS === "android" ? "bg-composer-panel px-[12px]" : "px-[12px]"}
+      className="px-[12px]"
       style={{ paddingTop: 6, paddingBottom: props.bottomInset + THREAD_COMPOSER_BOTTOM_GUTTER }}
     >
       {dictating ? (

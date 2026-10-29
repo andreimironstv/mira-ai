@@ -6,11 +6,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -23,9 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scrim
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,6 +52,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
@@ -109,7 +108,7 @@ class T3WorkspaceNavigationModule : Module() {
   }
 }
 
-/** One Material3 selection surface moves from below the list to its leading edge. */
+/** The tabs float in a capsule below the list, or line a rail along its leading edge. */
 class T3WorkspaceNavigationView(
   context: Context,
   appContext: AppContext
@@ -169,34 +168,67 @@ class T3WorkspaceNavigationView(
             if (rail) {
               rail()
             } else {
-              NavigationBar(
-                modifier = Modifier.fillMaxSize(),
-                containerColor = Color(containerColor),
-                tonalElevation = androidx.compose.ui.unit.Dp(0f),
-                windowInsets = WindowInsets(0),
-              ) {
-                tabs.forEach { tab ->
-                  NavigationBarItem(
-                    selected = selectedTab == tab,
-                    onClick = { onTabSelected(mapOf("tab" to tab)) },
-                    icon = { Icon(tabIconPainter(tab), contentDescription = null) },
-                    label = { Text(tabTitle(tab), fontSize = (12 * textScale).sp) },
-                    colors = NavigationBarItemDefaults.colors(
-                      selectedIconColor = Color(selectedColor),
-                      selectedTextColor = Color(selectedColor),
-                      indicatorColor = Color(indicatorColor),
-                      unselectedIconColor = Color(unselectedColor),
-                      unselectedTextColor = Color(unselectedColor),
-                    ),
-                  )
-                }
-              }
+              floatingBar()
             }
           }
         }
       },
       LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     )
+  }
+
+  /** The tabs in a capsule floating over the screen, as on iOS; the selected one in the accent. */
+  @Composable
+  private fun floatingBar() {
+    Box(
+      Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 9.dp),
+      contentAlignment = Alignment.Center,
+    ) {
+      Row(
+        Modifier
+          .fillMaxSize()
+          .shadow(BAR_SHADOW, CircleShape, clip = false)
+          .clip(CircleShape)
+          .background(Color(containerColor))
+          .padding(4.dp)
+          .selectableGroup(),
+      ) {
+        tabs.forEach { tab -> barItem(tab) }
+      }
+    }
+  }
+
+  @Composable
+  private fun RowScope.barItem(tab: String) {
+    val selected = selectedTab == tab
+    val title = tabTitle(tab)
+    val tint = Color(if (selected) selectedColor else unselectedColor)
+    Column(
+      Modifier
+        .weight(1f)
+        .fillMaxHeight()
+        .clip(CircleShape)
+        .background(if (selected) Color(indicatorColor) else Color.Transparent)
+        .selectable(
+          selected = selected,
+          role = Role.Tab,
+          onClick = { onTabSelected(mapOf("tab" to tab)) },
+        )
+        .semantics { contentDescription = title },
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center,
+    ) {
+      Icon(tabIconPainter(tab), contentDescription = null, tint = tint)
+      Text(
+        title,
+        Modifier.padding(top = 1.dp).clearAndSetSemantics {},
+        color = tint,
+        fontSize = (11 * textScale).sp,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+        softWrap = false,
+      )
+    }
   }
 
   @Composable
@@ -385,6 +417,7 @@ class T3WorkspaceNavigationView(
     val FAB_SIZE = 48.dp
     val ICON_SIZE = 24.dp
     val RAIL_SHADOW = 6.dp
+    val BAR_SHADOW = 8.dp
     val RAIL_EXPANDED_SHAPE = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
     const val DISABLED_ALPHA = 0.4f
 
