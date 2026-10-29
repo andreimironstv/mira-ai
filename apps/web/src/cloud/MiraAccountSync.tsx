@@ -4,8 +4,13 @@ import {
   RelayConnectionRegistration,
   RelayConnectionTarget,
 } from "@t3tools/client-runtime/connection";
-import { environmentsToAutoConnect, managedRelaySessionAtom } from "@t3tools/client-runtime/relay";
+import {
+  environmentsToAutoConnect,
+  managedRelaySessionAtom,
+  watchAccountEvents,
+} from "@t3tools/client-runtime/relay";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import * as Effect from "effect/Effect";
 import { useEffect, useEffectEvent, useRef } from "react";
 
 import { environmentCatalog } from "../connection/catalog";
@@ -32,9 +37,12 @@ import {
 import { miraAccess, miraChatHistory, miraChatRemote } from "./miraChat";
 import { fetchMiraAccount } from "./miraAccount";
 import { resolveClerkSignInProps } from "../components/clerk/authRedirect";
+import { resolveCloudPublicConfig } from "./publicConfig";
 import { useCloudLinkController } from "./useCloudLinkController";
 
+// A safety net only; the relay pushes account changes as they happen.
 const DISCOVERY_REFRESH_MS = 60_000;
+const SHARE_RETRY_MS = 60_000;
 // An admin's change to the plan or limits shows up within this long.
 const ACCOUNT_REFRESH_MS = 30_000;
 
@@ -127,12 +135,30 @@ export function MiraAccountSync() {
     };
   }, [accountId, refreshDiscovery]);
 
+  useEffect(() => {
+    const relayUrl = resolveCloudPublicConfig().relayUrl;
+    if (!relayReady || relaySession === null || relayUrl === null) return;
+    return watchAccountEvents({
+      relayUrl,
+      readToken: () => Effect.runPromise(relaySession.readClerkToken()),
+      onEnvironmentsChanged: () => void refreshDiscovery(),
+    });
+  }, [relayReady, relaySession, refreshDiscovery]);
+
   const shareThisComputer = useEffectEvent((account: string) => {
-    if (!isElectron || sharingAttemptedFor.current === account) return;
-    if (cloudLink.linkState.data === null || cloudLink.linkState.target === null) return;
+    if (!isElectron || !relayReady || sharingAttemptedFor.current === account) return;
+    const linkData = cloudLink.linkState.data;
+    if (linkData === null || cloudLink.linkState.target === null) return;
     sharingAttemptedFor.current = account;
-    if (cloudLink.linked || isComputerSharingOff(account)) return;
-    void cloudLink.reconcileCloudState({ managedTunnel: true, publish: true });
+    // A computer shared under another account moves to the one signed in now.
+    const sharedHere = cloudLink.linked && linkData.cloudUserId === account;
+    if (sharedHere || isComputerSharingOff(account)) return;
+    void cloudLink.reconcileCloudState({ managedTunnel: true, publish: true }).then((shared) => {
+      if (shared) return;
+      setTimeout(() => {
+        if (sharingAttemptedFor.current === account) sharingAttemptedFor.current = null;
+      }, SHARE_RETRY_MS);
+    });
   });
 
   const connectModel = useEffectEvent((account: string) => {

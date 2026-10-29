@@ -164,6 +164,7 @@ export function useCloudLinkController() {
       if (
         !currentLinkState.linked ||
         currentLinkState.linkRevoked === true ||
+        currentLinkState.cloudUserId !== userId ||
         currentManagedTunnel !== desired.managedTunnel
       ) {
         const linkResult = await linkPrimaryEnvironment({
