@@ -1,7 +1,7 @@
 // Per-account choices that keep automatic account sync from undoing what the user did.
 
 const sharingOffKey = (accountId: string) => `mira:computer-sharing-off:${accountId}`;
-const autoAddedKey = (accountId: string) => `mira:auto-added-computers:${accountId}`;
+const autoAddedKey = (accountId: string) => `mira:auto-added-computers:v2:${accountId}`;
 
 export function isComputerSharingOff(accountId: string): boolean {
   return localStorage.getItem(sharingOffKey(accountId)) === "1";

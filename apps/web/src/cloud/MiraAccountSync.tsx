@@ -111,6 +111,7 @@ export function MiraAccountSync() {
   const cloudLink = useCloudLinkController();
   const sharingAttemptedFor = useRef<string | null>(null);
   const modelAttemptedFor = useRef<string | null>(null);
+  const registering = useRef(new Set<string>());
 
   useEffect(() => {
     if (accountId === null) return;
@@ -167,15 +168,18 @@ export function MiraAccountSync() {
       previouslyAdded: readAutoAddedComputers(account),
     });
     for (const environment of pending) {
-      rememberAutoAddedComputer(account, environment.environmentId);
+      const id = environment.environmentId;
+      if (registering.current.has(id)) continue;
+      registering.current.add(id);
       void registerEnvironment(
         new RelayConnectionRegistration({
-          target: new RelayConnectionTarget({
-            environmentId: environment.environmentId,
-            label: environment.label,
-          }),
+          target: new RelayConnectionTarget({ environmentId: id, label: environment.label }),
         }),
-      );
+      ).then((result) => {
+        registering.current.delete(id);
+        // Only a computer that actually got added counts; a failed attempt retries later.
+        if (result._tag === "Success") rememberAutoAddedComputer(account, id);
+      });
     }
   });
 

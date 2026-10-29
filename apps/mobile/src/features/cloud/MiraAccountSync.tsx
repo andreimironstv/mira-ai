@@ -20,7 +20,7 @@ import { useWorkspaceEnvironments } from "../../state/workspace";
 const ACCOUNT_REFRESH_MS = 30_000;
 
 const autoAddedKey = (accountId: string) =>
-  `mira.autoAddedComputers.${accountId.replace(/[^\w.-]/g, "_")}`;
+  `mira.autoAddedComputers.v2.${accountId.replace(/[^\w.-]/g, "_")}`;
 
 async function readAutoAdded(accountId: string): Promise<ReadonlySet<string>> {
   try {
@@ -49,6 +49,7 @@ export function MiraAccountSync() {
     reportFailure: false,
   });
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const registering = useRef(new Set<string>());
   const autoAdded = useRef<Set<string>>(new Set());
 
   // The plan decides chat limits and agentic access; chats follow the account across devices.
@@ -121,18 +122,24 @@ export function MiraAccountSync() {
       localEnvironmentId: null,
       previouslyAdded: autoAdded.current,
     });
-    if (pending.length === 0) return;
-    for (const environment of pending) autoAdded.current.add(environment.environmentId);
-    void SecureStore.setItemAsync(autoAddedKey(accountId), JSON.stringify([...autoAdded.current]));
     for (const environment of pending) {
+      const id = environment.environmentId;
+      if (registering.current.has(id)) continue;
+      registering.current.add(id);
       void registerEnvironment(
         new RelayConnectionRegistration({
-          target: new RelayConnectionTarget({
-            environmentId: environment.environmentId,
-            label: environment.label,
-          }),
+          target: new RelayConnectionTarget({ environmentId: id, label: environment.label }),
         }),
-      );
+      ).then((result) => {
+        registering.current.delete(id);
+        // Only a computer that actually got added counts; a failed attempt retries later.
+        if (result._tag !== "Success") return;
+        autoAdded.current.add(id);
+        void SecureStore.setItemAsync(
+          autoAddedKey(accountId),
+          JSON.stringify([...autoAdded.current]),
+        );
+      });
     }
   });
 
