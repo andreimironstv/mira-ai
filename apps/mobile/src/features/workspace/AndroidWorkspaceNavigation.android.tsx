@@ -19,6 +19,7 @@ import {
   androidWorkspaceTabNavigationState,
   type AndroidWorkspaceNavigationTab,
 } from "./android-workspace-tabs";
+import { dispatchHardwareKeyboardCommand } from "../keyboard/hardwareKeyboardCommands";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import { useAndroidWorkspaceRoot } from "./AndroidWorkspaceTabsProvider";
 import { useNavigationTabOrder, useHiddenNavigationTabs } from "./navigation-tabs";
@@ -43,11 +44,13 @@ interface NativeNavigationProps extends ViewProps {
   readonly unselectedColor: number;
   readonly actionColor: number;
   readonly actionContentColor: number;
+  readonly searchVisible: boolean;
   readonly onTabSelected: (
     event: NativeSyntheticEvent<{ readonly tab: AndroidWorkspaceNavigationTab }>,
   ) => void;
   readonly onNewThread: () => void;
   readonly onOverlayChange: (event: NativeSyntheticEvent<{ readonly overlay: boolean }>) => void;
+  readonly onSearch: () => void;
 }
 
 const NativeNavigation = requireNativeView<NativeNavigationProps>("T3WorkspaceNavigation");
@@ -111,6 +114,9 @@ export function AndroidWorkspaceNavigation(props: {
         unselectedColor={nativeColor(unselectedColor)}
         actionColor={nativeColor(colors["--color-primary"])}
         actionContentColor={nativeColor(colors["--color-primary-foreground"])}
+        // Account has its own search in its app bar.
+        searchVisible={!rail && selectedTab !== "settings"}
+        onSearch={() => dispatchHardwareKeyboardCommand("focusSearch")}
         onTabSelected={(event) => {
           Keyboard.dismiss();
           const tab = event.nativeEvent.tab;

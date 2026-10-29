@@ -6,8 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -103,7 +106,10 @@ class T3WorkspaceNavigationModule : Module() {
       Prop("actionContentColor") { view: T3WorkspaceNavigationView, value: Int ->
         view.actionContentColor = value
       }
-      Events("onTabSelected", "onNewThread", "onOverlayChange")
+      Prop("searchVisible") { view: T3WorkspaceNavigationView, value: Boolean ->
+        view.searchVisible = value
+      }
+      Events("onTabSelected", "onNewThread", "onOverlayChange", "onSearch")
     }
   }
 }
@@ -119,6 +125,7 @@ class T3WorkspaceNavigationView(
   private val onTabSelected by EventDispatcher()
   private val onNewThread by EventDispatcher()
   private val onOverlayChange by EventDispatcher()
+  private val onSearch by EventDispatcher()
   var tabs by mutableStateOf(listOf("chats", "threads", "settings"))
   var selectedTab by mutableStateOf("threads")
   var rail by mutableStateOf(false)
@@ -134,6 +141,7 @@ class T3WorkspaceNavigationView(
   var unselectedColor by mutableStateOf(0)
   var actionColor by mutableStateOf(0)
   var actionContentColor by mutableStateOf(0)
+  var searchVisible by mutableStateOf(false)
 
   override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
     // Fabric measures the replacement bar before attaching it on a fold.
@@ -177,26 +185,58 @@ class T3WorkspaceNavigationView(
     )
   }
 
-  /** The tabs in a capsule floating over the screen, as on iOS; the selected one in the accent. */
+  /**
+   * As on iOS: the tabs in a capsule floating over the screen, the selected one in the accent
+   * with its filled icon, and search in its own circle beside them.
+   */
   @Composable
   private fun floatingBar() {
-    Box(
-      Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 9.dp),
-      contentAlignment = Alignment.Center,
+    Row(
+      Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 10.dp),
+      horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
       Row(
         Modifier
-          .fillMaxSize()
-          .shadow(BAR_SHADOW, CircleShape, clip = false)
-          .clip(CircleShape)
-          .background(Color(containerColor))
+          .weight(1f)
+          .fillMaxHeight()
+          .floatingSurface()
           .padding(4.dp)
           .selectableGroup(),
       ) {
         tabs.forEach { tab -> barItem(tab) }
       }
+      if (searchVisible) {
+        Box(
+          Modifier
+            .fillMaxHeight()
+            .aspectRatio(1f)
+            .floatingSurface()
+            .clickable(role = Role.Button) { onSearch(emptyMap<String, Any>()) }
+            .semantics { contentDescription = "Caută" },
+          contentAlignment = Alignment.Center,
+        ) {
+          Icon(
+            painterResource(R.drawable.t3_search),
+            contentDescription = null,
+            tint = Color(unselectedColor),
+          )
+        }
+      }
     }
   }
+
+  /** A soft lift and a hairline edge, standing in for iOS's glass. */
+  private fun Modifier.floatingSurface() = this
+    .shadow(
+      BAR_SHADOW,
+      CircleShape,
+      clip = false,
+      ambientColor = Color.Black.copy(alpha = 0.08f),
+      spotColor = Color.Black.copy(alpha = 0.16f),
+    )
+    .clip(CircleShape)
+    .background(Color(containerColor))
+    .border(0.5.dp, Color(unselectedColor).copy(alpha = 0.08f), CircleShape)
 
   @Composable
   private fun RowScope.barItem(tab: String) {
@@ -218,12 +258,12 @@ class T3WorkspaceNavigationView(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center,
     ) {
-      Icon(tabIconPainter(tab), contentDescription = null, tint = tint)
+      Icon(tabIconPainter(tab, selected), contentDescription = null, tint = tint)
       Text(
         title,
-        Modifier.padding(top = 1.dp).clearAndSetSemantics {},
+        Modifier.padding(top = 2.dp).clearAndSetSemantics {},
         color = tint,
-        fontSize = (11 * textScale).sp,
+        fontSize = (10.5f * textScale).sp,
         fontWeight = FontWeight.SemiBold,
         maxLines = 1,
         softWrap = false,
@@ -399,10 +439,10 @@ class T3WorkspaceNavigationView(
     if (tab == "pullRequests") "Pull Requests" else tabTitle(tab)
 
   @Composable
-  private fun tabIconPainter(tab: String) = painterResource(
+  private fun tabIconPainter(tab: String, selected: Boolean = false) = painterResource(
     when (tab) {
-      "chats" -> R.drawable.t3_chats
-      "threads" -> R.drawable.t3_agent
+      "chats" -> if (selected) R.drawable.t3_chats_selected else R.drawable.t3_chats
+      "threads" -> if (selected) R.drawable.t3_agent_selected else R.drawable.t3_agent
       "pullRequests" -> R.drawable.t3_pull_requests
       else -> R.drawable.t3_account
     }
@@ -417,7 +457,7 @@ class T3WorkspaceNavigationView(
     val FAB_SIZE = 48.dp
     val ICON_SIZE = 24.dp
     val RAIL_SHADOW = 6.dp
-    val BAR_SHADOW = 8.dp
+    val BAR_SHADOW = 5.dp
     val RAIL_EXPANDED_SHAPE = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
     const val DISABLED_ALPHA = 0.4f
 
