@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { AndroidHeaderIconButton } from "../../components/ui/AndroidScreenHeader";
 import { AppText as Text } from "../../components/ui/AppText";
 import { WorkspaceConnectionTitle } from "../home/WorkspaceConnectionTitle";
+import { useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
 
 /**
  * Android's header over each workspace tab's list. Plain React Native, not the Compose app bar:
@@ -21,6 +22,7 @@ export function WorkspaceListToolbarRow(props: {
   /** Stays trailing while searching, so it never moves and still narrows the results. */
   readonly filter: ReactNode;
 }) {
+  const { layout } = useAdaptiveWorkspaceLayout();
   if (props.searching) {
     return (
       <View className="min-h-[52px] flex-row items-center gap-2.5">
@@ -37,11 +39,13 @@ export function WorkspaceListToolbarRow(props: {
   return (
     <View>
       <View className="min-h-[52px] flex-row items-center justify-end gap-2.5">
-        <AndroidHeaderIconButton
-          accessibilityLabel={props.searchAccessibilityLabel}
-          icon="magnifyingglass"
-          onPress={props.onOpenSearch}
-        />
+        {layout.usesSplitView ? (
+          <AndroidHeaderIconButton
+            accessibilityLabel={props.searchAccessibilityLabel}
+            icon="magnifyingglass"
+            onPress={props.onOpenSearch}
+          />
+        ) : null}
         {props.filter}
       </View>
       <View className="flex-row pt-1">

@@ -99,8 +99,8 @@ final class T3SidebarTabBarView: ExpoView, UITabBarDelegate {
   private func prepareItems() {
     let iconBundle = Bundle(for: Self.self).url(forResource: "T3NativeControlIcons", withExtension: "bundle").flatMap(Bundle.init(url:))
     let pullRequestIcon = UIImage(named: "pull-request", in: iconBundle, compatibleWith: nil)?.withRenderingMode(.alwaysTemplate)
-    let labels = ["chats": "Chat", "threads": "Agent", "pullRequests": "PRs", "settings": "Cont"]
-    let symbols = ["chats": "text.bubble", "threads": "bolt.circle", "settings": "person.crop.circle"]
+    let labels = ["chats": "Chat", "threads": "Agent", "pullRequests": "PRs", "search": "Caut?", "settings": "Cont"]
+    let symbols = ["chats": "text.bubble", "threads": "bolt.circle", "search": "magnifyingglass", "settings": "person.crop.circle"]
     for (tab, label) in labels {
       let icon = tab == "pullRequests" ? pullRequestIcon : UIImage(systemName: symbols[tab] ?? "circle")
       let item = UITabBarItem(title: nil, image: tabIcon(icon), tag: 0)
@@ -123,7 +123,7 @@ final class T3SidebarTabBarView: ExpoView, UITabBarDelegate {
   private func layoutCompose(alongside frame: CGRect) {
     guard showsCompose, frame.height > 0 else { return }
     let row = convert(frame, from: tabBar)
-    let size = row.height + 8
+    let size = row.height
     composeButton.frame = CGRect(x: row.maxX + 16, y: row.midY - size / 2, width: size, height: size)
   }
 
@@ -158,6 +158,8 @@ final class T3SidebarTabBarView: ExpoView, UITabBarDelegate {
 
   func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
     guard tabs.indices.contains(item.tag) else { return }
-    onSelectionChange(["tab": tabs[item.tag]])
+    let tab = tabs[item.tag]
+    if tab == "search" { updateSelection() }
+    onSelectionChange(["tab": tab])
   }
 }

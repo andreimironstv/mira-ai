@@ -109,7 +109,7 @@ class T3WorkspaceNavigationModule : Module() {
       Prop("composeVisible") { view: T3WorkspaceNavigationView, value: Boolean ->
         view.composeVisible = value
       }
-      Events("onTabSelected", "onNewThread", "onOverlayChange")
+      Events("onTabSelected", "onNewThread", "onSearch", "onOverlayChange")
     }
   }
 }
@@ -124,6 +124,7 @@ class T3WorkspaceNavigationView(
 
   private val onTabSelected by EventDispatcher()
   private val onNewThread by EventDispatcher()
+  private val onSearch by EventDispatcher()
   private val onOverlayChange by EventDispatcher()
   var tabs by mutableStateOf(listOf("chats", "threads", "settings"))
   var selectedTab by mutableStateOf("threads")
@@ -202,7 +203,10 @@ class T3WorkspaceNavigationView(
           .padding(4.dp)
           .selectableGroup(),
       ) {
-        tabs.forEach { tab -> barItem(tab) }
+        tabs.forEach { tab ->
+          if (tab == "settings") barItem("search")
+          barItem(tab)
+        }
       }
       if (composeVisible) {
         Box(
@@ -252,7 +256,10 @@ class T3WorkspaceNavigationView(
         .selectable(
           selected = selected,
           role = Role.Tab,
-          onClick = { onTabSelected(mapOf("tab" to tab)) },
+          onClick = {
+            if (tab == "search") onSearch(emptyMap<String, Any>())
+            else onTabSelected(mapOf("tab" to tab))
+          },
         )
         .semantics { contentDescription = title },
       contentAlignment = Alignment.Center,
@@ -424,6 +431,7 @@ class T3WorkspaceNavigationView(
   }
 
   private fun tabTitle(tab: String) = when (tab) {
+    "search" -> "Caut?"
     "chats" -> "Chat"
     "threads" -> "Agent"
     "pullRequests" -> "Pulls"
@@ -436,6 +444,7 @@ class T3WorkspaceNavigationView(
   @Composable
   private fun tabIconPainter(tab: String, selected: Boolean = false) = painterResource(
     when (tab) {
+      "search" -> R.drawable.t3_search
       "chats" -> if (selected) R.drawable.t3_chats_selected else R.drawable.t3_chats
       "threads" -> if (selected) R.drawable.t3_agent_selected else R.drawable.t3_agent
       "pullRequests" -> R.drawable.t3_pull_requests

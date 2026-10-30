@@ -1,4 +1,3 @@
-import { useNavigation } from "@react-navigation/native";
 import { selectedNavigationTab, visibleNavigationTabs } from "./navigation-tab-order";
 import { requireNativeView } from "expo";
 import type { NativeSyntheticEvent, ViewProps } from "react-native";
@@ -6,6 +5,7 @@ import { useControlTheme } from "../../components/ui/useControlTheme";
 import { useNavigationTabOrder, useHiddenNavigationTabs } from "./navigation-tabs";
 import { useWorkspaceTabs } from "./WorkspaceTabsContext";
 import { useSelectWorkspaceTab } from "./useSelectWorkspaceTab";
+import { dispatchHardwareKeyboardCommand } from "../keyboard/hardwareKeyboardCommands";
 
 const NativeSidebarTabBar = requireNativeView<
   ViewProps & {
@@ -28,8 +28,7 @@ export function WorkspaceSidebarTabs(props: {
   const workspace = useWorkspaceTabs()!;
   const order = useNavigationTabOrder();
   const hidden = useHiddenNavigationTabs();
-  const tabs = [...visibleNavigationTabs(order, hidden), "settings" as const];
-  const navigation = useNavigation();
+  const tabs = [...visibleNavigationTabs(order, hidden), "search" as const, "settings" as const];
   const selectTab = useSelectWorkspaceTab();
   const { colors, colorScheme } = useControlTheme();
   // UIKit loses accessible names when updating nil-titled items in place.
@@ -51,7 +50,8 @@ export function WorkspaceSidebarTabs(props: {
       onCompose={() => props.onNewTask?.()}
       onSelectionChange={({ nativeEvent }) => {
         const tab = tabs.find((candidate) => candidate === nativeEvent.tab);
-        if (tab === "settings") selectTab("settings");
+        if (tab === "search") dispatchHardwareKeyboardCommand("focusSearch");
+        else if (tab === "settings") selectTab("settings");
         else if (tab) selectTab(tab);
       }}
       // Keep the host stable while UIKit updates the bars' intrinsic size and safe area together.

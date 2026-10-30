@@ -2,8 +2,10 @@ import { useNavigation } from "@react-navigation/native";
 import { chatMatchesQuery, chatPreview, chatTimeLabel } from "@t3tools/client-runtime/chat";
 import type { SaasChatConversation } from "@t3tools/contracts/saas";
 import * as Haptics from "expo-haptics";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  BackHandler,
+  Keyboard,
   Platform,
   ScrollView,
   StyleSheet,
@@ -24,6 +26,7 @@ import { SearchField } from "../../components/ui/SearchField";
 import { NativeStackScreenOptions } from "../../native/StackHeader";
 import { useHardwareKeyboardCommand } from "../keyboard/hardwareKeyboardCommands";
 import { ThreadSwipeable } from "../home/thread-swipe-actions";
+import { useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
 import { useWorkspaceTabs } from "../workspace/WorkspaceTabsContext";
 import { miraChatHistory, useMiraChatHistory } from "./miraChat";
 
@@ -138,6 +141,7 @@ function useChatSearch() {
 /** The Chat tab: every chat on the account, newest first. */
 export function ChatHome() {
   const navigation = useNavigation();
+  const { layout } = useAdaptiveWorkspaceLayout();
   const { chats, loaded, unread, streaming } = useMiraChatHistory();
   const { query, setQuery } = useChatSearch();
   const [androidSearching, setAndroidSearching] = useState(false);
@@ -149,6 +153,18 @@ export function ChatHome() {
     searchInput.current?.focus();
     return true;
   });
+  useEffect(() => {
+    if (Platform.OS !== "android" || !androidSearching) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (Keyboard.isVisible()) Keyboard.dismiss();
+      else {
+        setQuery("");
+        setAndroidSearching(false);
+      }
+      return true;
+    });
+    return () => subscription.remove();
+  }, [androidSearching, setQuery]);
   const newChat = () => navigation.navigate("Chat", {});
   // Read per render; the list re-renders whenever a chat changes, which keeps time labels current.
   const now = new Date();
@@ -161,16 +177,17 @@ export function ChatHome() {
           <NativeStackScreenOptions options={{ headerShown: false }} />
           <AndroidScreenHeader
             title="Chat"
-            actions={[
-              {
-                accessibilityLabel: androidSearching ? "Închide căutarea" : "Caută în chat-uri",
-                icon: androidSearching ? "xmark" : "magnifyingglass",
-                onPress: () => {
-                  if (androidSearching) setQuery("");
-                  setAndroidSearching(!androidSearching);
-                },
-              },
-            ]}
+            actions={
+              layout.usesSplitView
+                ? [
+                    {
+                      accessibilityLabel: "Caut? ?n chat-uri",
+                      icon: "magnifyingglass",
+                      onPress: () => setAndroidSearching(true),
+                    },
+                  ]
+                : undefined
+            }
           />
           {androidSearching ? (
             <View className="px-4 pb-2">

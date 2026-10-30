@@ -77,10 +77,10 @@ export function WorkspaceToolbar(props: {
   }, [workspace, selectedTab, props.sidebar, panes.primarySidebarVisible, togglePrimarySidebar]);
   const focusSearch = useCallback(() => {
     if (!isTabActive(selectedTab)) return false;
-    if (duoSearch || !NATIVE_LIQUID_GLASS_SUPPORTED) enterSearch();
+    if (duoSearch || compactTabs || !NATIVE_LIQUID_GLASS_SUPPORTED) enterSearch();
     searchRef.current?.focus();
     return true;
-  }, [isTabActive, selectedTab, enterSearch, duoSearch]);
+  }, [isTabActive, selectedTab, enterSearch, duoSearch, compactTabs]);
   const cancelSearch = useCallback(() => {
     workspace.recordScrollOffset(selectedTab, tab.searchEntryOffset);
     workspace.dispatch({ type: "cancel", tab: selectedTab });
@@ -149,9 +149,9 @@ export function WorkspaceToolbar(props: {
           // Without Liquid Glass, Settings keeps its search field out instead of a search button,
           // which would take the header's trailing items from the scope filter.
           headerSearchBarOptions:
-            (NATIVE_LIQUID_GLASS_SUPPORTED ||
+            ((NATIVE_LIQUID_GLASS_SUPPORTED && !compactTabs) ||
               tab.searchMode !== "resting" ||
-              workspace.settingsOpen) &&
+              (workspace.settingsOpen && !compactTabs)) &&
             searchVisible
               ? {
                   ref: searchRef,
@@ -192,7 +192,7 @@ export function WorkspaceToolbar(props: {
           {searchButton}
           {nativeToolbarCompose && foldedSearch ? <Toolbar.Spacer width={8} /> : null}
           {composeButton}
-          {selectedTab === "chats" && props.onNewChat ? (
+          {selectedTab === "chats" && props.onNewChat && !compactTabs ? (
             <Toolbar.Button
               accessibilityLabel="Chat nou"
               icon="square.and.pencil"
@@ -210,7 +210,7 @@ export function WorkspaceToolbar(props: {
               onPress={props.onNewTask}
             />
           )}
-          {NATIVE_LIQUID_GLASS_SUPPORTED ? null : (
+          {NATIVE_LIQUID_GLASS_SUPPORTED || compactTabs ? null : (
             <Toolbar.Button
               accessibilityLabel={searchLabel}
               icon="magnifyingglass"

@@ -20,6 +20,8 @@ import { SearchField } from "./SearchField";
 import { androidHeaderMenuActions, findHeaderMenuAction } from "./headerMenu.android";
 import type { AppBarProps } from "./AppBar.types";
 import { useAndroidControlSizing } from "./useAndroidControlSizing";
+import { useHardwareKeyboardCommand } from "../../features/keyboard/hardwareKeyboardCommands";
+import { useIsFocused } from "@react-navigation/native";
 
 export function AppBar(props: AppBarProps) {
   const { search } = props;
@@ -28,6 +30,13 @@ export function AppBar(props: AppBarProps) {
   const { themeVariables } = useAppearancePreferences();
   const inputRef = useRef<TextInputInstance>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const focused = useIsFocused();
+  useHardwareKeyboardCommand("focusSearch", () => {
+    if (!focused || !search?.workspaceSearch) return false;
+    setSearchOpen(true);
+    inputRef.current?.focus();
+    return true;
+  });
   const searching = search !== undefined && (searchOpen || search.value.length > 0);
   const onSearchChange = search?.onChangeText;
   const closeSearch = useCallback(() => {
@@ -144,7 +153,7 @@ export function AppBar(props: AppBarProps) {
       hideBottomBorder={props.hideBottomBorder}
       compact={props.compact}
       actions={
-        search
+        search && !search.workspaceSearch
           ? [
               {
                 accessibilityLabel: search.placeholder,

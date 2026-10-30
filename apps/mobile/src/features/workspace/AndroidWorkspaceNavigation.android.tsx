@@ -23,6 +23,7 @@ import { useAppearancePreferences } from "../settings/appearance/AppearancePrefe
 import { useAndroidWorkspaceRoot } from "./AndroidWorkspaceTabsProvider";
 import { useNavigationTabOrder, useHiddenNavigationTabs } from "./navigation-tabs";
 import { useWorkspaceTabs } from "./WorkspaceTabsContext";
+import { dispatchHardwareKeyboardCommand } from "../keyboard/hardwareKeyboardCommands";
 
 // Matches RAIL_WIDTH in the native rail.
 export const ANDROID_WORKSPACE_RAIL_WIDTH = 72;
@@ -48,6 +49,7 @@ interface NativeNavigationProps extends ViewProps {
     event: NativeSyntheticEvent<{ readonly tab: AndroidWorkspaceNavigationTab }>,
   ) => void;
   readonly onNewThread: () => void;
+  readonly onSearch: () => void;
   readonly onOverlayChange: (event: NativeSyntheticEvent<{ readonly overlay: boolean }>) => void;
 }
 
@@ -114,7 +116,7 @@ export function AndroidWorkspaceNavigation(props: {
         actionColor={nativeColor(colors["--color-primary"])}
         actionContentColor={nativeColor(colors["--color-primary-foreground"])}
         // New chat rides beside the tabs; the Agent list keeps its own New thread button.
-        composeVisible={!rail && selectedTab === "chats"}
+        composeVisible={!rail}
         onTabSelected={(event) => {
           Keyboard.dismiss();
           const tab = event.nativeEvent.tab;
@@ -128,13 +130,14 @@ export function AndroidWorkspaceNavigation(props: {
           }
           props.onSelect?.();
         }}
+        onSearch={() => dispatchHardwareKeyboardCommand("focusSearch")}
         onNewThread={() => {
           Keyboard.dismiss();
           if (selectedTab === "chats") navigation.navigate("Chat", {});
           else props.onNewThread();
         }}
         onOverlayChange={(event) => props.onOverlayChange?.(event.nativeEvent.overlay)}
-        style={rail ? { flex: 1 } : { height: 80 * Math.max(1, scale) }}
+        style={rail ? { flex: 1 } : { height: 68 * Math.max(1, scale) }}
       />
     </View>
   );

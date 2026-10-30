@@ -5,6 +5,7 @@ import {
 } from "./navigation-tabs";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { View, useWindowDimensions, type NativeSyntheticEvent } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { Tabs, type TabSelectedEvent, type TabSelectionRejectedEvent } from "react-native-screens";
 
 import { WorkspaceTabsContext, useWorkspaceTabs } from "./WorkspaceTabsContext";
@@ -79,6 +80,7 @@ export function WorkspaceNativeTabs(props: {
   readonly hidden: boolean;
 }) {
   const workspace = useWorkspaceTabs()!;
+  const navigation = useNavigation();
   const order = useEnabledNavigationTabs();
   const primaryTabs = order.slice(0, 4);
   const overflow = order[4];
@@ -177,8 +179,10 @@ export function WorkspaceNativeTabs(props: {
             compact={compactSidebarTabs}
             reserveComposeSpace={compactSidebarTabs}
             onNewTask={
-              compactSidebarTabs && !workspace.settingsOpen && selectedTab === "threads"
-                ? startNewTask
+              compactSidebarTabs
+                ? selectedTab === "chats" && !workspace.settingsOpen
+                  ? () => navigation.navigate("Chat", {})
+                  : startNewTask
                 : undefined
             }
           />

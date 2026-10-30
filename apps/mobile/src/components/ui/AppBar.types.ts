@@ -51,6 +51,7 @@ export interface AppBarSearch {
   readonly onRefresh?: () => void;
   readonly refreshAccessibilityLabel?: string;
   readonly refreshInToolbar?: boolean;
+  readonly workspaceSearch?: boolean;
 }
 
 export interface AppBarProps {

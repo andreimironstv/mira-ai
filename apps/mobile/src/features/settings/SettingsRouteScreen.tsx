@@ -77,6 +77,7 @@ export function SettingsRouteScreen() {
               search={
                 workspace
                   ? {
+                      workspaceSearch: true,
                       value: workspace.state.tabs.settings.query,
                       onChangeText: (query) =>
                         workspace.dispatch({ type: "query", tab: "settings", query }),
