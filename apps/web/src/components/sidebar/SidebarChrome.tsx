@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 
 import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
+import { MiraLogo } from "../MiraLogo";
 import { cn } from "../../lib/utils";
 import { usePullRequestsSupported } from "../../state/environments";
 import {
@@ -117,16 +118,11 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
 
 function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
   return (
-    <span className="inline-flex min-w-0 items-baseline gap-1 text-sm font-medium tracking-tight">
-      <span
-        className={cn(
-          "truncate font-semibold [text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both_cap_alphabetic]:py-1",
-          onBackdrop ? "text-white" : "text-foreground",
-        )}
-      >
-        Mira
-      </span>
-    </span>
+    <MiraLogo
+      role="img"
+      aria-label="Mira"
+      className={cn("h-3.5 w-auto shrink-0", onBackdrop ? "text-white" : "text-foreground")}
+    />
   );
 }
 
