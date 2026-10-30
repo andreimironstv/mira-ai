@@ -112,8 +112,12 @@ export type SidebarProviderEntry = Pick<
   "instanceId" | "driverKind" | "enabled" | "displayName" | "accentColor" | "models"
 >;
 function compactSidebarTimeLabel(label: string): string {
-  if (label === "just now") return "now";
-  return label.endsWith(" ago") ? label.slice(0, -4) : label;
+  if (label === "chiar acum") return "acum";
+  const compact = label.endsWith(" în urmă") ? label.slice(0, -" în urmă".length) : label;
+  return compact
+    .replace(/^(\d+) min$/u, "$1m")
+    .replace(/^(\d+) h$/u, "$1h")
+    .replace(/^(\d+) zi(le)?$/u, "$1z");
 }
 
 // Subscribes to the minute tick itself, so only the label re-renders each

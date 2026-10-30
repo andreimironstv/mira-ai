@@ -2,38 +2,16 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 
-vi.mock("@expo/ui/jetpack-compose", () => {
-  const Slot = (props: { readonly children?: ReactNode }) => <div>{props.children}</div>;
-  const Button = (props: { readonly children?: ReactNode; readonly onClick?: () => void }) => (
-    <button onClick={props.onClick}>{props.children}</button>
+vi.mock("react-native", () => {
+  const Slot = (props: { readonly children?: ReactNode; readonly onPress?: () => void }) => (
+    <div onClick={props.onPress}>{props.children}</div>
   );
-  return {
-    AlertDialog: Object.assign(Slot, {
-      Title: Slot,
-      Text: Slot,
-      DismissButton: Slot,
-      ConfirmButton: Slot,
-    }),
-    Button,
-    OutlinedButton: Button,
-    Column: Slot,
-    FlowRow: Slot,
-    Icon: () => null,
-    OutlinedTextField: Object.assign(Slot, { Label: Slot, Placeholder: Slot }),
-    Text: Slot,
-    useNativeState: (value: unknown) => ({ get: () => value }),
-  };
+  return { Modal: Slot, Pressable: Slot, View: Slot };
 });
-vi.mock("./NativeThemeHost.android", () => ({
-  NativeThemeHost: (props: { readonly children?: ReactNode }) => <div>{props.children}</div>,
+vi.mock("./AppText", () => ({
+  AppText: (props: { readonly children?: ReactNode }) => <span>{props.children}</span>,
+  AppTextInput: () => <input />,
 }));
-vi.mock("../../features/settings/appearance/AppearancePreferencesProvider", () => ({
-  useAppearancePreferences: () => ({ themeVariables: {} }),
-}));
-vi.mock("../../features/settings/appearance/useScaledTextRole", () => ({
-  useScaledTextRole: () => ({}),
-}));
-vi.mock("../../lib/mobileTheme", () => ({ themeColorWithContrast: () => "#ffffff" }));
 
 import * as Dialog from "./Dialog.android";
 

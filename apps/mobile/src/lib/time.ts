@@ -14,5 +14,5 @@ export function relativeTime(input: string): string {
   if (deltaHours < 24) return `${deltaHours}h`;
 
   const deltaDays = Math.floor(deltaHours / 24);
-  return `${deltaDays}d`;
+  return `${deltaDays}z`;
 }
