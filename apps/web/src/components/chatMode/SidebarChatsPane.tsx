@@ -42,7 +42,7 @@ export function SidebarChatsPane({ onNavigate }: { readonly onNavigate?: () => v
       className="min-h-full"
       fixedHeader={
         <SidebarGroup className="z-[1]">
-          <div className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-sm font-medium text-sidebar-muted-foreground hover:bg-sidebar-row-hover focus-within:bg-sidebar-row-hover focus-within:text-sidebar-foreground focus-within:ring-1 focus-within:ring-inset focus-within:ring-ring/70">
+          <div className="flex h-8 min-w-0 items-center gap-2 rounded-lg bg-sidebar-control-surface px-2.5 text-sm text-sidebar-muted-foreground focus-within:text-sidebar-foreground focus-within:ring-1 focus-within:ring-inset focus-within:ring-ring/70">
             <SearchIcon className="size-4 shrink-0 text-(--sidebar-icon-color)" />
             <SidebarInput
               ref={searchInput}
