@@ -854,7 +854,7 @@ function UsageOverview({
                 <th className="w-full py-2 text-left font-normal">Model</th>
                 <th className="py-2 pl-6 font-normal">Cost</th>
                 <th className="hidden py-2 pl-6 font-normal sm:table-cell">Share</th>
-                <th className="py-2 pl-6 font-normal">Tokens</th>
+                <th className="py-2 pl-6 font-normal">Tokeni</th>
               </tr>
             </thead>
             <tbody>
@@ -940,7 +940,7 @@ function UsageOverview({
                     </th>
                   ))}
                   <th className="py-2 pl-4 text-right font-normal">Total</th>
-                  <th className="py-2 pl-4 text-right font-normal">Tokens</th>
+                  <th className="py-2 pl-4 text-right font-normal">Tokeni</th>
                 </tr>
               </thead>
               <tbody>
@@ -1113,7 +1113,7 @@ function UsageEnvironmentFilter({
 }) {
   const allSelected = selectedEnvironmentIds === null;
   const label = allSelected
-    ? "All environments"
+    ? "Toate mediile"
     : selectedEnvironments.length === 1
       ? selectedEnvironments[0]!.label
       : `${selectedEnvironments.length} environments`;
@@ -1234,7 +1234,7 @@ function UsageProviderFilter({
   const visible = PROVIDER_ORDER.filter((provider) => !hiddenProviders.has(provider));
   const label =
     visible.length === PROVIDER_ORDER.length
-      ? "All providers"
+      ? "Toți furnizorii"
       : visible.length === 0
         ? "No providers"
         : visible.length === 1

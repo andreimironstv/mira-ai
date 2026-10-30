@@ -52,7 +52,7 @@ export function MiraAccountSettings() {
 
   if (!isSignedIn) {
     return (
-      <SettingsSection title="Mira account" icon={<CloudIcon aria-hidden className="size-4" />}>
+      <SettingsSection title="Cont Mira" icon={<CloudIcon aria-hidden className="size-4" />}>
         <SettingsRow
           title="Neautentificat"
           description="Chat-ul merge fără cont pentru câteva mesaje pe zi. Autentifică-te pentru chat nelimitat și ca să-ți accesezi calculatoarele de la distanță."
@@ -71,7 +71,7 @@ export function MiraAccountSettings() {
   const hasPro = account?.plan.agenticEnabled === true;
   const isPaid = account !== null && account.plan.priceCents > 0;
   return (
-    <SettingsSection title="Mira account" icon={<CloudIcon aria-hidden className="size-4" />}>
+    <SettingsSection title="Cont Mira" icon={<CloudIcon aria-hidden className="size-4" />}>
       <SettingsRow
         title={account ? `Planul ${account.plan.name}` : "Se încarcă planul…"}
         description={account?.email ?? undefined}

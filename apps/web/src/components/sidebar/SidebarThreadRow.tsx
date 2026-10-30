@@ -15,7 +15,6 @@ import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
 import { resolveSettledThreadTimestamp } from "@t3tools/client-runtime/state/thread-sort";
 import { type EnvironmentThreadSearchMatch } from "@t3tools/client-runtime/state/thread-search";
 import { formatWorkingDurationLabel } from "@t3tools/client-runtime/state/models";
-import { threadAvatar } from "@t3tools/client-runtime/thread-avatar";
 import { scopeThreadRef, scopedThreadKey } from "@t3tools/client-runtime/environment";
 import {
   AuthOrchestrationOperateScope,
@@ -160,42 +159,6 @@ function WorkingDurationLabel(props: { startedMs: number }) {
 
 function terminalProcessLabel(count: number): string {
   return `${count} terminal ${count === 1 ? "process" : "processes"} running`;
-}
-
-type SidebarThreadAvatarIndicator = "working" | "attention" | "done" | null;
-
-const AVATAR_INDICATOR_CLASS_NAME = {
-  working: "bg-info",
-  attention: "bg-warning",
-  done: "bg-success",
-} as const;
-
-function SidebarThreadAvatar(props: {
-  seed: string;
-  title: string;
-  indicator: SidebarThreadAvatarIndicator;
-}) {
-  const avatar = threadAvatar(props.seed, props.title);
-  return (
-    <span
-      aria-hidden
-      className="relative flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-      style={{
-        backgroundImage: `linear-gradient(135deg, ${avatar.from}, ${avatar.to})`,
-        color: "rgb(30 30 40 / 0.72)",
-      }}
-    >
-      {avatar.initial}
-      {props.indicator ? (
-        <span
-          className={cn(
-            "absolute -right-px -bottom-px size-3 rounded-full border-2 border-sidebar",
-            AVATAR_INDICATOR_CLASS_NAME[props.indicator],
-          )}
-        />
-      ) : null}
-    </span>
-  );
 }
 
 const SIDEBAR_STATUS_TEXT: Partial<Record<SidebarThreadStatus, string>> = {
@@ -689,14 +652,8 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                       : null;
   const isWokeStatus = topStatus?.icon === "woke";
   const statusText = resolveSidebarStatusText(status, thread.goal?.status === "active");
-  const avatarIndicator: SidebarThreadAvatarIndicator =
-    status === "working" || status === "waiting"
-      ? "working"
-      : status === "approval" || status === "input" || status === "request"
-        ? "attention"
-        : isUnread
-          ? "done"
-          : null;
+  const unreadDone =
+    isUnread && !["working", "waiting", "approval", "input", "request"].includes(status);
   const preview = thread.latestUserAuthoredMessagePreview ?? null;
 
   const branchMismatch = resolveLocalCheckoutBranchMismatch({
@@ -1264,11 +1221,6 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
         >
           {accessibleTitle}
           <div className="relative z-10 flex items-center gap-3 px-(--sidebar-row-content-inset) py-2.5">
-            <SidebarThreadAvatar
-              seed={threadKey}
-              title={thread.title}
-              indicator={avatarIndicator}
-            />
             <div className="min-w-0 flex-1">
               <div className="flex h-5 min-w-0 items-center gap-1.5">
                 {draftIndicator}
@@ -1277,6 +1229,13 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                   <span role="status" className="sr-only">
                     Se regenerează titlul
                   </span>
+                ) : null}
+                {unreadDone ? (
+                  <span
+                    role="img"
+                    aria-label="Răspuns necitit"
+                    className="size-1.5 shrink-0 rounded-full bg-primary"
+                  />
                 ) : null}
                 {sortable?.isDragging ? (
                   dragDestination

@@ -61,7 +61,6 @@ import {
   type ThreadListV2Status,
 } from "./threadListV2";
 import { QueuedMessageIcon } from "./queued-message-icon";
-import { ThreadAvatar, type ThreadAvatarIndicator } from "./thread-avatar";
 import { shouldRecedeThreadRow } from "./thread-row-emphasis";
 import { ThreadSearchMatchExcerpt } from "./thread-search-match";
 import { PullRequestGlyph } from "../pull-requests/pullRequestGlyphs";
@@ -925,14 +924,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
       ? `Deschide conversația. Glisează la stânga pentru ${primaryAction.label.toLowerCase()}.`
       : `Deschide conversația. Glisează la stânga pentru ${primaryAction.label.toLowerCase()} și amânare.`;
 
-  const avatarIndicator: ThreadAvatarIndicator =
-    status === "working" || status === "waiting"
-      ? "working"
-      : status === "approval" || status === "input" || status === "request"
-        ? "attention"
-        : isUnread
-          ? "done"
-          : null;
+  const needsAttention = status === "approval" || status === "input" || status === "request";
   const failureText =
     (status === "failed" || status === "limited") && thread.runtime?.lastError
       ? thread.runtime.lastError
@@ -946,13 +938,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
   const preview = thread.latestUserAuthoredMessagePreview ?? null;
 
   const cardContent = (
-    <View className="flex-row items-center gap-3.5">
-      <ThreadAvatar
-        seed={`${thread.environmentId}:${thread.id}`}
-        title={thread.title}
-        indicator={avatarIndicator}
-        ringClassName={sidebarPane ? "border-drawer" : "border-screen"}
-      />
+    <View className="flex-row items-center">
       <View className="min-w-0 flex-1">
         <View className="flex-row items-baseline gap-2">
           <Text
@@ -986,6 +972,12 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
                 weight="semibold"
               />
             </Pressable>
+          ) : null}
+          {isUnread ? (
+            <View
+              accessibilityLabel="Răspuns necitit"
+              className="size-2 self-center rounded-full bg-primary"
+            />
           ) : null}
           <Text
             className={cn(
@@ -1023,7 +1015,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
                 "flex-1 text-sm font-t3-medium",
                 selected
                   ? selectedThreadRowColors.foregroundClassName
-                  : avatarIndicator === "attention"
+                  : needsAttention
                     ? "text-warning-foreground"
                     : "text-adaptive-sky-600-400",
               )}
