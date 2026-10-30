@@ -695,7 +695,7 @@ export const AuthorizedClientsHeaderAction = memo(function AuthorizedClientsHead
             <section className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-xs font-medium text-foreground">Permissions</h3>
+                  <h3 className="text-xs font-medium text-foreground">Permisiuni</h3>
                   <p className="text-xs text-muted-foreground">
                     Limitează ce poate face clientul asociat.
                   </p>

@@ -470,10 +470,6 @@
     "./model-traits": {
       "types": "./src/modelTraits.ts",
       "default": "./src/modelTraits.ts"
-    },
-    "./thread-avatar": {
-      "types": "./src/threadAvatar.ts",
-      "default": "./src/threadAvatar.ts"
     }
   },
   "scripts": {

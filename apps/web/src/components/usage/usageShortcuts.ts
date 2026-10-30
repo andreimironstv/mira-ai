@@ -5,15 +5,15 @@ import { resolveShortcutCommand, type ShortcutEventLike } from "../../keybinding
 export type UsageMetric = UsageChartMetric | "limits";
 export const METRIC_OPTIONS = [
   { value: "cost", label: "Cost", command: "usage.cost" },
-  { value: "tokens", label: "Tokens", command: "usage.tokens" },
-  { value: "limits", label: "Limits", command: "usage.limits" },
+  { value: "tokens", label: "Tokeni", command: "usage.tokens" },
+  { value: "limits", label: "Limite", command: "usage.limits" },
 ] as const satisfies readonly { value: UsageMetric; label: string; command: KeybindingCommand }[];
 
 export const WINDOW_OPTIONS = [
-  { days: 1, label: "Past 24h", command: "usage.period.day" },
-  { days: 7, label: "7 days", command: "usage.period.week" },
-  { days: 30, label: "30 days", command: "usage.period.month" },
-  { days: 90, label: "90 days", command: "usage.period.quarter" },
+  { days: 1, label: "Ultimele 24h", command: "usage.period.day" },
+  { days: 7, label: "7 zile", command: "usage.period.week" },
+  { days: 30, label: "30 de zile", command: "usage.period.month" },
+  { days: 90, label: "90 de zile", command: "usage.period.quarter" },
 ] as const;
 
 export function resolveUsageShortcut(

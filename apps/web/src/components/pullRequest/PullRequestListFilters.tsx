@@ -117,8 +117,8 @@ export function PullRequestSearchInput({
           setDraft(event.currentTarget.value);
           onChange(event.currentTarget.value);
         }}
-        placeholder="Search pull requests, or label:bug"
-        aria-label="Search pull requests"
+        placeholder="Caută pull request-uri sau label:bug"
+        aria-label="Caută pull request-uri"
       />
     </InputGroup>
   );
@@ -135,13 +135,13 @@ export const pullRequestProjectKey = (project: {
 }) => JSON.stringify([project.environmentId, project.id]);
 
 const DRAFT_OPTIONS = [
-  { value: UNFILTERED_VALUE, label: "All", Icon: LayersIcon },
+  { value: UNFILTERED_VALUE, label: "Toate", Icon: LayersIcon },
   { value: "only", label: "Drafts only", Icon: PullRequestGlyph.draft },
   { value: "hide", label: "Hide drafts", Icon: EyeOffIcon },
 ] as const satisfies ReadonlyArray<PullRequestFilterOption<string>>;
 
 const REVIEW_OPTIONS = [
-  { value: UNFILTERED_VALUE, label: "All", Icon: LayersIcon },
+  { value: UNFILTERED_VALUE, label: "Toate", Icon: LayersIcon },
   { value: "approved", label: "Approved", Icon: CircleCheckIcon },
   { value: "changes-requested", label: "Changes requested", Icon: CircleXIcon },
   { value: "review-required", label: "Review required", Icon: CircleDashedIcon },
@@ -149,7 +149,7 @@ const REVIEW_OPTIONS = [
 ] as const satisfies ReadonlyArray<PullRequestFilterOption<string>>;
 
 const CHECKS_OPTIONS = [
-  { value: UNFILTERED_VALUE, label: "All", Icon: LayersIcon },
+  { value: UNFILTERED_VALUE, label: "Toate", Icon: LayersIcon },
   { value: "passing", label: "Passing", Icon: CircleCheckIcon },
   { value: "failing", label: "Failing", Icon: CircleXIcon },
 ] as const satisfies ReadonlyArray<PullRequestFilterOption<string>>;
@@ -554,7 +554,7 @@ export function PullRequestFiltersMenu({
     <Menu onOpenChange={onOpenChange}>
       <MenuTrigger render={<Button variant="outline" />}>
         <ListFilterIcon className="size-4" />
-        <span>Filters</span>
+        <span>Filtre</span>
         {filterCount > 0 ? (
           <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground tabular-nums">
             {filterCount}
