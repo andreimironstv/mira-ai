@@ -1,22 +1,8 @@
-import { NativeThemeHost } from "./NativeThemeHost.android";
-import {
-  AlertDialog,
-  Button,
-  OutlinedButton,
-  Icon,
-  FlowRow,
-  Column,
-  OutlinedTextField,
-  Text,
-  useNativeState,
-} from "@expo/ui/jetpack-compose";
-
-import { useAppearancePreferences } from "../../features/settings/appearance/AppearancePreferencesProvider";
-import { useScaledTextRole } from "../../features/settings/appearance/useScaledTextRole";
-
 import { useCallback, useEffect, useRef, useState } from "react";
-import { themeColorWithContrast } from "../../lib/mobileTheme";
-import type { Alert, AlertButton } from "react-native";
+import { Modal, Pressable, View, type Alert, type AlertButton } from "react-native";
+
+import { cn } from "../../lib/cn";
+import { AppTextInput, AppText as Text } from "./AppText";
 import type { ConfirmDialogRequest, TextInputDialogRequest } from "./Dialog.types";
 
 export type { ConfirmDialogRequest, TextInputDialogRequest } from "./Dialog.types";
@@ -127,133 +113,100 @@ export function Host() {
   ) : null;
 }
 
+/** The iOS alert, drawn in React Native so Android shares its look. */
 function DialogPresentation(props: DialogPresentationProps) {
-  const { themeVariables: colors } = useAppearancePreferences();
-  const titleTypography = useScaledTextRole("title");
-  const bodyTypography = useScaledTextRole("footnote");
-  const inputTypography = useScaledTextRole("body");
-  const inputState = useNativeState(props.inputInitialValue ?? "");
-  const inputSelection = useNativeState({ start: 0, end: props.inputInitialValue?.length ?? 0 });
+  const [inputValue, setInputValue] = useState(props.inputInitialValue ?? "");
   const confirm = () => {
-    const value = props.inputInitialValue === undefined ? undefined : inputState.get();
-    props.onConfirm(value);
+    props.onConfirm(props.inputInitialValue === undefined ? undefined : inputValue);
   };
   const actions = props.alertActions ?? [
-    { text: props.request.cancelText ?? "Anulează", onPress: props.onCancel },
+    {
+      text: props.request.cancelText ?? "Anulează",
+      style: "cancel" as const,
+      onPress: props.onCancel,
+    },
     {
       text: props.request.confirmText,
       style: props.request.destructive ? ("destructive" as const) : ("default" as const),
       onPress: confirm,
     },
   ];
-  const destructive = actions.some((action) => action.style === "destructive");
-  // Error text colors can be pastel in dark themes. Filled actions need a white-label contrast pair.
-  const destructiveFill = themeColorWithContrast(colors["--color-danger-foreground"], "#ffffff");
-  const renderAction = (action: AlertButton, index: number) => {
-    const isDestructive = action.style === "destructive";
-    const isPrimary = isDestructive || index === actions.length - 1;
-    const Component = isPrimary ? Button : OutlinedButton;
-    return (
-      <Component
-        key={index}
-        onClick={() => (props.alertActions ? props.onAlertAction?.(action) : action.onPress?.())}
-        colors={{
-          containerColor: isDestructive
-            ? destructiveFill
-            : isPrimary
-              ? colors["--color-prominent-action"]
-              : "#00000000",
-          contentColor: isDestructive
-            ? "#ffffff"
-            : isPrimary
-              ? colors["--color-prominent-action-foreground"]
-              : colors["--color-foreground"],
-        }}
-      >
-        <Text style={bodyTypography}>{action.text ?? ""}</Text>
-      </Component>
-    );
-  };
+  const stacked = actions.length > 2;
+  const dismissable = props.dismissable ?? true;
   return (
-    <NativeThemeHost ignoreSafeAreaKeyboardInsets style={{ height: 0, width: 0 }}>
-      <AlertDialog
-        onDismissRequest={props.onCancel}
-        properties={{
-          dismissOnBackPress: props.dismissable ?? true,
-          dismissOnClickOutside: props.dismissable ?? true,
-        }}
-        tonalElevation={0}
-        colors={{
-          containerColor: colors["--color-card"],
-          titleContentColor: colors["--color-foreground"],
-          textContentColor: colors["--color-foreground-secondary"],
-        }}
+    <Modal
+      transparent
+      statusBarTranslucent
+      animationType="fade"
+      onRequestClose={dismissable ? props.onCancel : () => undefined}
+    >
+      <Pressable
+        accessible={false}
+        className="flex-1 items-center justify-center bg-black/40 px-8"
+        onPress={dismissable ? props.onCancel : undefined}
       >
-        <AlertDialog.Title>
-          <Column verticalArrangement={{ spacedBy: 16 }}>
-            {destructive ? (
-              <Icon
-                source={require("../../../assets/icons/delete.xml")}
-                tint={colors["--color-danger-foreground"]}
-                size={24}
+        <Pressable
+          accessible={false}
+          className="w-full max-w-[300px] overflow-hidden rounded-[20px] bg-card"
+        >
+          <View className="items-center gap-1 px-5 pt-5 pb-4">
+            <Text
+              accessibilityRole="header"
+              className="text-center font-t3-semibold text-[17px] leading-[22px] text-foreground"
+            >
+              {props.request.title}
+            </Text>
+            {props.request.message ? (
+              <Text className="text-center text-[13px] leading-[18px] text-foreground-secondary">
+                {props.request.message}
+              </Text>
+            ) : null}
+            {props.inputInitialValue !== undefined ? (
+              <AppTextInput
+                autoFocus
+                selectTextOnFocus
+                accessibilityLabel={props.request.title}
+                value={inputValue}
+                placeholder={props.inputPlaceholder}
+                onChangeText={(value) => {
+                  setInputValue(value);
+                  props.onInputChange?.(value);
+                }}
+                onSubmitEditing={confirm}
+                returnKeyType="done"
+                className="mt-3 w-full"
               />
             ) : null}
-            <Text style={titleTypography}>{props.request.title}</Text>
-          </Column>
-        </AlertDialog.Title>
-        {props.inputInitialValue !== undefined ? (
-          <AlertDialog.Text>
-            <Column verticalArrangement={{ spacedBy: 16 }}>
-              {props.request.message ? (
-                <Text style={bodyTypography}>{props.request.message}</Text>
-              ) : null}
-              <OutlinedTextField
-                autoFocus
-                singleLine
-                value={inputState}
-                selection={inputSelection}
-                onValueChange={props.onInputChange}
-                textStyle={inputTypography}
-                keyboardOptions={{ imeAction: "done" }}
-                keyboardActions={{
-                  onDone: confirm,
-                }}
-                colors={{
-                  focusedTextColor: colors["--color-foreground"],
-                  unfocusedTextColor: colors["--color-foreground"],
-                  focusedIndicatorColor: colors["--color-focus"],
-                  unfocusedIndicatorColor: colors["--color-border"],
-                  cursorColor: colors["--color-focus"],
-                }}
+          </View>
+          <View className={stacked ? "" : "flex-row"}>
+            {actions.map((action, index) => (
+              <Pressable
+                key={index}
+                accessibilityRole="button"
+                onPress={() =>
+                  props.alertActions ? props.onAlertAction?.(action) : action.onPress?.()
+                }
+                className={cn(
+                  "min-h-[48px] flex-1 items-center justify-center border-t border-border px-3 active:bg-subtle",
+                  !stacked && index > 0 && "border-l",
+                )}
               >
-                <OutlinedTextField.Label>
-                  <Text style={bodyTypography}>{props.request.title}</Text>
-                </OutlinedTextField.Label>
-                {props.inputPlaceholder ? (
-                  <OutlinedTextField.Placeholder>
-                    <Text style={bodyTypography}>{props.inputPlaceholder}</Text>
-                  </OutlinedTextField.Placeholder>
-                ) : null}
-              </OutlinedTextField>
-            </Column>
-          </AlertDialog.Text>
-        ) : props.request.message ? (
-          <AlertDialog.Text>
-            <Text style={bodyTypography}>{props.request.message}</Text>
-          </AlertDialog.Text>
-        ) : null}
-        {actions.length > 1 ? (
-          <AlertDialog.DismissButton>
-            <FlowRow>{actions.slice(0, -1).map(renderAction)}</FlowRow>
-          </AlertDialog.DismissButton>
-        ) : null}
-        {actions.length > 0 ? (
-          <AlertDialog.ConfirmButton>
-            {renderAction(actions[actions.length - 1]!, actions.length - 1)}
-          </AlertDialog.ConfirmButton>
-        ) : null}
-      </AlertDialog>
-    </NativeThemeHost>
+                <Text
+                  className={cn(
+                    "text-center text-[17px]",
+                    action.style === "destructive" ? "text-danger-foreground" : "text-primary-text",
+                    action.style !== "cancel" && index === actions.length - 1 && "font-t3-semibold",
+                  )}
+                  numberOfLines={1}
+                >
+                  {action.text ?? ""}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 

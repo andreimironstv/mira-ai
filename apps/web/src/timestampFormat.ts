@@ -230,13 +230,13 @@ export function msUntilRelativeTimeChange(
 
 export function formatRelativeElapsed(elapsedMs: number): RelativeTimeParts {
   const seconds = Math.floor(elapsedMs / 1000);
-  if (seconds < 60) return { value: "just now", suffix: null };
+  if (seconds < 60) return { value: "chiar acum", suffix: null };
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return { value: `${minutes}m`, suffix: "ago" };
+  if (minutes < 60) return { value: `${minutes} min`, suffix: "în urmă" };
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return { value: `${hours}h`, suffix: "ago" };
+  if (hours < 24) return { value: `${hours} h`, suffix: "în urmă" };
   const days = Math.floor(hours / 24);
-  return { value: `${days}d`, suffix: "ago" };
+  return { value: days === 1 ? "1 zi" : `${days} zile`, suffix: "în urmă" };
 }
 
 export function formatRelativeTime(
@@ -257,10 +257,10 @@ export function formatElapsedDurationLabel(isoDate: string, nowMs: number = Date
   const date = parseTimestampDate(isoDate);
   if (!date) return "";
   const diffMs = nowMs - date.getTime();
-  if (diffMs <= 0) return "just now";
+  if (diffMs <= 0) return "chiar acum";
 
   const seconds = Math.floor(diffMs / 1000);
-  if (seconds < 5) return "just now";
+  if (seconds < 5) return "chiar acum";
   if (seconds < 60) return `${seconds}s`;
 
   const minutes = Math.floor(seconds / 60);
